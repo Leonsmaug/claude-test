@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="nb">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Kartinnsyn</title>
+    <meta name="description" content="Åpent, skybasert kartinnsyn med MapLibre, Overture Maps og OpenStreetMap – uten server og uten API-nøkler." />
+    <meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#14171c" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="manifest.webmanifest" />
+  </head>
+  <body>
+    <a class="skip" href="#search-input">Hopp til søk</a>
+    <div id="map" role="application" aria-label="Interaktivt kart"></div>
+    <div id="progress" aria-hidden="true"></div>
+
+    <div class="top">
+      <div class="search" role="search">
+        <button id="panel-toggle" class="icon-btn" aria-label="Vis eller skjul meny" aria-expanded="true" aria-controls="panel">
+          <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+        </button>
+        <input
+          id="search-input"
+          type="search"
+          placeholder="Søk etter sted, adresse eller koordinat"
+          autocomplete="off"
+          spellcheck="false"
+          role="combobox"
+          aria-expanded="false"
+          aria-controls="search-results"
+          aria-autocomplete="list"
+        />
+        <kbd class="hint" aria-hidden="true">/</kbd>
+        <ul id="search-results" role="listbox" hidden></ul>
+      </div>
+    </div>
+
+    <aside id="panel" aria-label="Kartmeny">
+      <div class="grip" aria-hidden="true"></div>
+      <header class="brand">
+        <img class="logo" src="icon.svg" alt="" width="36" height="36" />
+        <div>
+          <h1>Kartinnsyn</h1>
+          <p>Åpne data, rett fra skyen</p>
+        </div>
+        <button id="theme-toggle" class="icon-btn" aria-label="Bytt mellom lyst og mørkt tema" title="Tema">
+          <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z" /></svg>
+        </button>
+      </header>
+
+      <nav class="tabs" role="tablist">
+        <button role="tab" aria-selected="true" aria-controls="tab-kart" id="t-kart">Kart</button>
+        <button role="tab" aria-selected="false" aria-controls="tab-verktoy" id="t-verktoy">Verktøy</button>
+        <button role="tab" aria-selected="false" aria-controls="tab-om" id="t-om">Om</button>
+      </nav>
+
+      <section id="tab-kart" role="tabpanel" aria-labelledby="t-kart">
+        <h2>Bakgrunnskart</h2>
+        <div id="basemaps" class="basemaps" role="radiogroup" aria-label="Bakgrunnskart"></div>
+
+        <h2>Kartlag</h2>
+        <ul id="overlays" class="overlays"></ul>
+
+        <details class="legend" open>
+          <summary>Tegnforklaring – steder</summary>
+          <ul id="legend"></ul>
+        </details>
+      </section>
+
+      <section id="tab-verktoy" role="tabpanel" aria-labelledby="t-verktoy" hidden>
+        <h2>Mål</h2>
+        <div class="tool-grid">
+          <button class="tool" data-action="measure-distance"><svg viewBox="0 0 24 24"><path d="M3 17 17 3l4 4L7 21zM7 13l2 2M10 10l2 2M13 7l2 2" /></svg>Avstand</button>
+          <button class="tool" data-action="measure-area"><svg viewBox="0 0 24 24"><path d="M4 8 12 3l8 5v8l-8 5-8-5z" /></svg>Areal</button>
+        </div>
+        <h2>Visning</h2>
+        <div class="tool-grid">
+          <button class="tool" data-action="toggle-3d" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 2 3 7v10l9 5 9-5V7zM3 7l9 5 9-5M12 12v10" /></svg>3D-visning</button>
+          <button class="tool" data-action="toggle-terrain" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="m2 20 7-12 4 6 3-4 6 10z" /></svg>Terreng</button>
+          <button class="tool" data-action="toggle-globe" aria-pressed="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" /></svg>Globus</button>
+          <button class="tool" data-action="locate"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" /></svg>Min posisjon</button>
+        </div>
+        <h2>Del og eksporter</h2>
+        <div class="tool-grid">
+          <button class="tool" data-action="share"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" /></svg>Del lenke</button>
+          <button class="tool" data-action="export-png"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="9" cy="10" r="2" /><path d="m21 17-5-5-9 8" /></svg>Lagre bilde</button>
+          <button class="tool" data-action="print"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4v-7h16v7h-2M8 14h8v7H8z" /></svg>Skriv ut</button>
+          <button class="tool" data-action="export-geolibre"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v3h16v-3" /></svg>GeoLibre-prosjekt</button>
+        </div>
+        <p class="muted small">GeoLibre-prosjektet inneholder kartutsnittet og Overture-lagene som PMTiles og kan åpnes i <a href="https://geolibre.app" target="_blank" rel="noopener">GeoLibre</a> for videre analyse.</p>
+      </section>
+
+      <section id="tab-om" role="tabpanel" aria-labelledby="t-om" hidden>
+        <h2>Om kartinnsynet</h2>
+        <p>En helt statisk webapp. Kartdata leses direkte fra åpne <strong>PMTiles</strong>-arkiver i objektlagring med HTTP-områdeforespørsler. Det er ingen flisserver, database eller API-nøkkel.</p>
+        <dl class="facts">
+          <dt>Overture-utgave</dt><dd id="release">–</dd>
+          <dt>Kartmotor</dt><dd>MapLibre GL JS <span id="ml-version"></span></dd>
+          <dt>Format</dt><dd>PMTiles v3, Mapbox Vector Tiles</dd>
+          <dt>Søk</dt><dd>Photon (OSM) og lokale Overture-steder</dd>
+        </dl>
+        <h2>Hurtigtaster</h2>
+        <dl class="keys">
+          <dt><kbd>/</kbd></dt><dd>Søk</dd>
+          <dt><kbd>M</kbd></dt><dd>Mål avstand</dd>
+          <dt><kbd>A</kbd></dt><dd>Mål areal</dd>
+          <dt><kbd>3</kbd></dt><dd>Bytt 2D/3D</dd>
+          <dt><kbd>Esc</kbd></dt><dd>Avbryt / lukk</dd>
+        </dl>
+        <h2>Datakilder</h2>
+        <p class="small">© <a href="https://overturemaps.org" target="_blank" rel="noopener">Overture Maps Foundation</a> (ODbL, CDLA Permissive 2.0, CC BY 4.0) · © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap-bidragsytere</a> · <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> · Sentinel-2 cloudless © EOX · Høydedata: Terrain Tiles på AWS Open Data · Søk: <a href="https://photon.komoot.io" target="_blank" rel="noopener">Photon</a>.</p>
+      </section>
+    </aside>
+
+    <article id="info" aria-live="polite" hidden>
+      <button class="icon-btn close" aria-label="Lukk objektinfo"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
+      <div class="info-body"></div>
+      <footer class="info-actions">
+        <button data-action="zoom-feature">Zoom hit</button>
+        <a class="osm-link" target="_blank" rel="noopener">Åpne i OSM</a>
+      </footer>
+    </article>
+
+    <div id="measure-bar" role="status" hidden>
+      <span class="measure-text"></span>
+      <button data-action="measure-undo">Angre</button>
+      <button data-action="measure-finish">Ferdig</button>
+      <button data-action="measure-stop" class="primary">Avslutt</button>
+    </div>
+
+    <div id="statusbar" aria-live="off">
+      <button id="coords" title="Kopier koordinat">–</button>
+      <span id="zoom-level"></span>
+    </div>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

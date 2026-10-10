@@ -1,0 +1,25 @@
+{
+  "name": "kartinnsyn",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Skybasert kartinnsyn med MapLibre, PMTiles, Overture Maps og OpenStreetMap",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@geolibre/core": "3.3.0",
+    "@geolibre/map": "3.3.0",
+    "maplibre-gl": "6.13.0",
+    "pmtiles": "4.5.0"
+  },
+  "devDependencies": {
+    "@types/geojson": "^7946.0.16",
+    "typescript": "7.0.2",
+    "vite": "8.3.4"
+  }
+}
