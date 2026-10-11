@@ -1,0 +1,112 @@
+{
+  "_overture": {
+    "tiles": "2026-09-23.1",
+    "parquet": "2026-09-23.0"
+  },
+  "kristiansand": {
+    "name": "Kristiansand",
+    "data": "data-krs",
+    "bbox": [
+      7.9,
+      58.09,
+      8.16,
+      58.205
+    ],
+    "omrader": "voronoi",
+    "start": {
+      "center": [
+        7.9955,
+        58.1455
+      ],
+      "zoom": 14.7,
+      "pitch": 55,
+      "bearing": -20
+    },
+    "intro": "steder, bygninger og områder i Kristiansand by",
+    "mapLabel": "Kart over Kristiansand by",
+    "areaTitle": "Område",
+    "areaChip": "Områdeanalyse",
+    "headline": "Fra «finn ut hva Overture har om Kristiansand» til ferdig datagrunnlag, uten GIS-server",
+    "clipText": "klipper Kristiansand by ut av over 500 GB med fliser",
+    "duckText": "Spørringer rett mot GeoParquet på S3 leser bare radgruppene rundt Kristiansand. Overture mangler bydelsgrenser her, så Claude lagde områder rundt de 15 navngitte bydelspunktene (Voronoi i EUREF89 UTM 33) og trakk fra sjø og vann, slik at arealene er landareal.",
+    "tableTitle": "Områdene sammenlignet",
+    "tableNote": "Overture har ikke bydelsgrenser for Kristiansand. Områdene er laget rundt nærmeste bydelsnavn og er ikke offisielle grenser. Arealet er landareal innenfor kartutsnittet.",
+    "qualityNote": "I Kristiansand har bare 20 av 40 835 bygninger målt høyde i Overture, mot 15 188 av 33 423 i sentrale Oslo. Der målt høyde mangler, bruker appen etasjer × 3,2 m (3 861 bygninger). Slike hull er lette å overse uten en analyse som denne.",
+    "sql": "-- Områder rundt navngitte bydelspunkter, beregnet i UTM33 og uten vann\nWITH pts AS (\n  SELECT names.primary AS name,\n         ST_Transform(geometry, 'EPSG:4326', 'EPSG:25833', always_xy := true) AS g\n  FROM district_points                 -- Overture Divisions: macrohood\n), cells AS (\n  SELECT unnest(ST_Dump(ST_VoronoiDiagram(ST_Collect(list(g))))).geom AS cell\n  FROM pts\n), land AS (\n  SELECT ST_Difference(ST_MakeEnvelope(7.90, 58.09, 8.16, 58.205),\n                       ST_Union_Agg(geometry)) AS geometry\n  FROM water                           -- Overture Base: sjø, innsjøer, elver\n)\nSELECT pts.name,\n       ST_Intersection(ST_Transform(cell, 'EPSG:25833', 'EPSG:4326',\n                                    always_xy := true), land.geometry) AS geometry\nFROM cells JOIN pts ON ST_Contains(cell, pts.g), land;",
+    "suggestions": [
+      [
+        "Hvilke områder har flest serveringssteder per km²? Vis det i kartet og som diagram.",
+        "Hvilke områder har flest serveringssteder per km²?"
+      ],
+      [
+        "Hvor mange apotek ligger innen 1 km fra Torvet i Kvadraturen? List dem med avstand.",
+        "Hvor mange apotek ligger innen 1 km fra Torvet?"
+      ],
+      [
+        "Sammenlign Hånes-området (med Sørlandsparken) og Kvadraturen: antall steder og fordeling på grupper. Lag et diagram.",
+        "Sammenlign Sørlandsparken-området og Kvadraturen"
+      ],
+      [
+        "Finn de 10 største bygningene etter fotavtrykk og vis dem i 3D.",
+        "Finn de 10 største bygningene og vis dem i 3D"
+      ],
+      [
+        "Hvor mange bygninger mangler høyde i dataene, og hva betyr det for analysen?",
+        "Hvor gode er byggdataene?"
+      ]
+    ]
+  },
+  "oslo": {
+    "name": "Oslo",
+    "data": "data",
+    "bbox": [
+      10.68,
+      59.895,
+      10.83,
+      59.945
+    ],
+    "omrader": "polygoner",
+    "start": {
+      "center": [
+        10.7475,
+        59.9135
+      ],
+      "zoom": 14.4,
+      "pitch": 55,
+      "bearing": -18
+    },
+    "intro": "steder, bygninger og bydeler i sentrale Oslo",
+    "mapLabel": "Kart over sentrale Oslo",
+    "areaTitle": "Bydel",
+    "areaChip": "Bydelsanalyse",
+    "headline": "Fra «finn ut hva Overture har om Oslo» til ferdig datagrunnlag, uten GIS-server",
+    "clipText": "klipper sentrale Oslo ut av over 500 GB med fliser",
+    "duckText": "Spørringer rett mot GeoParquet på S3 leser bare radgruppene i Oslo. Areal regnes i EUREF89 UTM 33, og steder knyttes til bydel med punkt-i-polygon.",
+    "tableTitle": "Bydelene sammenlignet (innenfor utsnittet)",
+    "tableNote": "Bydelsgrensene er klippet til kartutsnittet, så areal og antall gjelder bare den delen av bydelen som er med.",
+    "qualityNote": "Overture har målt høyde for 15 188 av 33 423 bygninger i utsnittet. Der målt høyde mangler, bruker appen etasjer × 3,2 m.",
+    "sql": "-- Bydeler klippet til utsnittet, areal i UTM33, tetthet per bydel\nWITH clip AS (\n  SELECT names.primary AS name,\n         ST_Intersection(geometry, ST_MakeEnvelope(10.68, 59.895, 10.83, 59.945)) AS geometry\n  FROM districts_raw\n), z AS (\n  SELECT name, geometry,\n         ST_Area(ST_Transform(geometry, 'EPSG:4326', 'EPSG:25833',\n                              always_xy := true)) / 1e6 AS km2\n  FROM clip\n)\nSELECT z.name, z.km2,\n  (SELECT count(*) FROM p\n    WHERE ST_Contains(z.geometry, ST_Point(p.lon, p.lat))) AS steder\nFROM z;",
+    "suggestions": [
+      [
+        "Hvilke bydeler har flest serveringssteder per km²? Vis det i kartet og som diagram.",
+        "Hvilke bydeler har flest serveringssteder per km²?"
+      ],
+      [
+        "Finn de 10 høyeste bygningene og vis dem i 3D med høydefarger.",
+        "Finn de 10 høyeste bygningene og vis dem i 3D"
+      ],
+      [
+        "Hvor mange apotek ligger innen 500 meter fra Oslo S? List dem med avstand.",
+        "Hvor mange apotek ligger innen 500 m fra Oslo S?"
+      ],
+      [
+        "Sammenlign Grünerløkka og Frogner: antall steder, fordeling på grupper og snitthøyde på bygningene.",
+        "Sammenlign Grünerløkka og Frogner"
+      ],
+      [
+        "Hva slags steder dominerer i kartutsnittet jeg ser på nå? Lag et diagram.",
+        "Hva dominerer i kartutsnittet jeg ser nå?"
+      ]
+    ]
+  }
+}

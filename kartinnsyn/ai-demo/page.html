@@ -1,0 +1,442 @@
+<title>Kartlab {{name}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" />
+<style>
+/* MAPLIBRE_CSS */
+</style>
+<style>
+/* Layout: arbeidsflate med smal toppmeny; kartfanen er chat til venstre og kart til høyre, de to andre fanene er lesesider. */
+:root {
+  --bg: #eef2f4;
+  --surface: #ffffff;
+  --surface-2: #f5f8f9;
+  --ink: #0f1d26;
+  --muted: #56666f;
+  --line: rgba(15, 29, 38, 0.12);
+  --accent: #0b6e8a;
+  --accent-soft: rgba(11, 110, 138, 0.1);
+  --signal: #e2335f;
+  --good: #2f8f5b;
+  --shadow: 0 10px 30px rgba(15, 29, 38, 0.12), 0 1px 2px rgba(15, 29, 38, 0.08);
+  --font: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --r: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b131a; --surface: #121d25; --surface-2: #17242e; --ink: #e5edf1; --muted: #93a5b0;
+    --line: rgba(229, 237, 241, 0.12); --accent: #4fc0dd; --accent-soft: rgba(79, 192, 221, 0.14);
+    --signal: #ff6b8d; --good: #5cc48a; --shadow: 0 10px 30px rgba(0, 0, 0, 0.45); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b131a; --surface: #121d25; --surface-2: #17242e; --ink: #e5edf1; --muted: #93a5b0;
+  --line: rgba(229, 237, 241, 0.12); --accent: #4fc0dd; --accent-soft: rgba(79, 192, 221, 0.14);
+  --signal: #ff6b8d; --good: #5cc48a; --shadow: 0 10px 30px rgba(0, 0, 0, 0.45); color-scheme: dark;
+}
+
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--font); display: flex; flex-direction: column; overflow: hidden; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+a { color: var(--accent); }
+.num, time, .t, .bar-val, td { font-variant-numeric: tabular-nums; }
+
+/* ---------- Toppmeny ---------- */
+.top { display: flex; align-items: center; gap: 16px; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; margin-right: auto; min-width: 0; }
+.brand svg { width: 30px; height: 30px; flex: none; }
+.brand h1 { font-size: 17px; font-weight: 800; margin: 0; letter-spacing: -0.01em; }
+.brand p { margin: 0; font-size: 12px; color: var(--muted); }
+[role="tablist"] { display: flex; gap: 2px; padding: 3px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; }
+[role="tab"] { border: 0; background: transparent; padding: 6px 12px; border-radius: 8px; font-weight: 600; font-size: 13.5px; color: var(--muted); white-space: nowrap; }
+[role="tab"][aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+
+main { flex: 1; min-height: 0; position: relative; }
+[role="tabpanel"] { position: absolute; inset: 0; }
+
+/* ---------- Kart og KI ---------- */
+#tab-kart { display: grid; grid-template-columns: minmax(340px, 420px) 1fr; }
+#chat { display: flex; flex-direction: column; min-height: 0; background: var(--surface); border-right: 1px solid var(--line); }
+.chat-head { display: flex; align-items: center; gap: 8px; padding: 12px 16px 8px; }
+.chat-head h2 { font-size: 14px; margin: 0; font-weight: 700; }
+.chat-head .who { font-size: 12px; color: var(--muted); margin-right: auto; }
+.chat-head button { border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px; padding: 4px 10px; font-size: 12.5px; }
+#messages { flex: 1; overflow-y: auto; padding: 4px 16px 12px; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+.intro { font-size: 14px; color: var(--muted); }
+.intro strong { color: var(--ink); }
+#suggestions { padding: 0 16px 10px; display: flex; flex-direction: column; gap: 6px; }
+#suggestions p { margin: 0 0 2px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+#suggestions button { text-align: left; border: 1px solid var(--line); background: var(--surface-2); border-radius: 10px; padding: 8px 11px; font-size: 13.5px; line-height: 1.35; }
+#suggestions button:hover { border-color: var(--accent); background: var(--accent-soft); }
+.msg { max-width: 100%; font-size: 14.5px; }
+.msg.user .body { background: var(--accent); color: #fff; padding: 8px 12px; border-radius: 14px 14px 4px 14px; margin-left: 15%; }
+:root[data-theme="dark"] .msg.user .body { color: #04222b; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .msg.user .body { color: #04222b; } }
+.msg.assistant .body p { margin: 0 0 8px; }
+.msg.assistant .body ul, .msg.assistant .body ol { margin: 0 0 8px; padding-left: 20px; }
+.msg.assistant .body h4 { margin: 8px 0 4px; font-size: 14px; }
+.thinking { color: var(--muted); animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .45; } }
+.steps { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+.steps:empty { display: none; }
+.step { font: 11.5px var(--mono); color: var(--accent); background: var(--accent-soft); border-radius: 6px; padding: 2px 7px; }
+.note { color: var(--signal); font-size: 13px; }
+.msg-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.msg-actions button { font-size: 12.5px; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 3px 9px; }
+.msg-actions button:hover { border-color: var(--accent); }
+.shared-answer .body { border-left: 3px solid var(--accent); padding-left: 10px; }
+.eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); font-weight: 700; margin: 0 0 2px; }
+.shared-answer .sq { font-weight: 700; }
+#chat-status { margin: 0 16px 8px; font-size: 13px; padding: 8px 10px; border-radius: 8px; background: var(--accent-soft); }
+#ask { display: flex; gap: 8px; padding: 10px 16px 14px; border-top: 1px solid var(--line); align-items: flex-end; }
+#q { flex: 1; min-width: 0; resize: none; border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; font: inherit; font-size: 14.5px; background: var(--surface-2); color: var(--ink); max-height: 120px; }
+#q:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+#ask button { border: 0; border-radius: 10px; padding: 9px 14px; font-weight: 700; background: var(--accent); color: #fff; }
+#ask button#stop { background: var(--signal); }
+#ask button:disabled { opacity: .5; cursor: not-allowed; }
+
+.chart { margin: 4px 0 8px; padding: 10px 12px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; }
+.chart figcaption { font-weight: 700; font-size: 13px; margin-bottom: 6px; }
+.bar-row { display: grid; grid-template-columns: minmax(80px, 38%) 1fr auto; gap: 8px; align-items: center; font-size: 12.5px; padding: 2px 0; }
+.bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-track { height: 10px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.bar { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+.bar-val { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+
+#shared { border-top: 1px solid var(--line); padding: 8px 16px; max-height: 34%; overflow-y: auto; }
+#shared summary { cursor: pointer; font-weight: 700; font-size: 13.5px; }
+#shared-count { font: 12px var(--mono); background: var(--accent-soft); color: var(--accent); border-radius: 99px; padding: 0 7px; margin-left: 4px; }
+#shared-list { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 8px; }
+#shared-list li { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font-size: 13px; }
+#shared-list li.empty { color: var(--muted); border-style: dashed; }
+#shared-list .who { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
+#shared-list .who img { border-radius: 50%; }
+#shared-list .who time { margin-left: auto; }
+#shared-list .sq { margin: 4px 0 6px; font-weight: 600; }
+#shared-list .row { display: flex; gap: 6px; }
+#shared-list button { font-size: 12px; border: 1px solid var(--line); background: var(--surface-2); border-radius: 7px; padding: 2px 8px; }
+#shared-list button.ghost { background: transparent; color: var(--muted); }
+
+.map-wrap { position: relative; min-width: 0; min-height: 0; }
+#map { position: absolute; inset: 0; background: var(--bg); }
+#layer-controls { position: absolute; top: 12px; left: 12px; right: 60px; display: flex; flex-wrap: wrap; gap: 6px; z-index: 2; pointer-events: none; }
+.chip { pointer-events: auto; border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: 5px 12px; font-size: 13px; font-weight: 600; box-shadow: var(--shadow); }
+.chip[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: transparent; }
+#legend { position: absolute; left: 12px; bottom: 28px; z-index: 2; max-width: min(520px, calc(100% - 140px)); display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 7px 11px; font-size: 12px; box-shadow: var(--shadow); }
+#legend .lg { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+#legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+#legend small { color: var(--muted); }
+.ramp { width: 120px; height: 8px; border-radius: 99px; background: linear-gradient(90deg, #e8f1f6, #4a9cc4, #d9480f); }
+.ramp-h { background: linear-gradient(90deg, #3b6fb6, #66b2a6, #f2c14e, #e8743b, #c0392b); }
+#info { position: absolute; top: 56px; right: 56px; width: 320px; max-width: calc(100% - 24px); max-height: calc(100% - 120px); overflow: auto; z-index: 3; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); padding: 12px 14px; }
+#info .close { position: absolute; top: 6px; right: 6px; border: 0; background: transparent; font-size: 20px; line-height: 1; padding: 4px 8px; color: var(--muted); }
+.info-kind { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); font-weight: 700; }
+.info-title { margin: 2px 26px 2px 0; font-size: 17px; }
+.info-sub { color: var(--muted); font-size: 13px; }
+.info-rows { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 10px 0 0; font-size: 13px; }
+.info-rows dt { color: var(--muted); }
+.info-rows dd { margin: 0; overflow-wrap: anywhere; }
+.copy-id { font: 11.5px var(--mono); border: 1px solid var(--line); background: var(--surface-2); border-radius: 6px; padding: 0 6px; }
+.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; }
+#loader { position: absolute; inset: 0; z-index: 5; display: grid; place-content: center; gap: 10px; text-align: center; background: var(--bg); padding: 16px; }
+#loader .track { width: min(320px, 80vw); height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; }
+#load-bar { display: block; height: 100%; width: 2%; background: var(--accent); transition: width .2s; }
+#load-text { font-size: 13px; color: var(--muted); }
+.maplibregl-ctrl-group { background: var(--surface) !important; box-shadow: var(--shadow) !important; border-radius: 10px !important; }
+:root[data-theme="dark"] .maplibregl-ctrl-icon { filter: invert(1); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .maplibregl-ctrl-icon { filter: invert(1); } }
+.maplibregl-ctrl-attrib { background: var(--surface) !important; color: var(--muted); }
+.maplibregl-ctrl-attrib a { color: var(--muted) !important; }
+
+/* ---------- Lesesider ---------- */
+.page { overflow-y: auto; padding-block: 28px 56px; padding-inline: 16px; }
+.page-inner { max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column; gap: 36px; }
+.page h2 { font-size: clamp(24px, 3.4vw, 34px); line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 10px; text-wrap: balance; font-weight: 800; }
+.page h3 { font-size: 17px; margin: 0 0 10px; font-weight: 700; }
+.lede { font-size: 17px; max-width: 68ch; color: var(--muted); margin: 0; }
+.lede strong { color: var(--ink); }
+.kicker { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--accent); font-weight: 800; margin: 0 0 6px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; }
+.kpi .v { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.kpi .l { font-size: 13px; color: var(--muted); }
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.grid-2 > * { min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px 18px; }
+.panel p { margin: 0 0 8px; }
+.panel small, .src { color: var(--muted); font-size: 12.5px; }
+ol.pipeline { list-style: none; padding: 0; margin: 0; counter-reset: s; display: flex; flex-direction: column; gap: 10px; }
+ol.pipeline > li { counter-increment: s; display: grid; grid-template-columns: 34px 1fr; gap: 12px; align-items: start; }
+ol.pipeline > li::before { content: counter(s); width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; font-weight: 800; font-size: 14px; }
+ol.pipeline p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+ul.timed { list-style: none; padding: 0; margin: 0; font-size: 14px; }
+ul.timed li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+ul.timed .t { font-family: var(--mono); color: var(--accent); white-space: nowrap; }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: right; padding: 7px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+thead th { font-size: 12px; color: var(--muted); font-weight: 600; }
+pre.code { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; overflow-x: auto; font: 12.5px/1.55 var(--mono); margin: 0; }
+.compare { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.compare .panel h3 { display: flex; align-items: center; gap: 8px; }
+.tag { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; border-radius: 99px; padding: 2px 8px; background: var(--accent-soft); color: var(--accent); }
+ul.ticks { padding-left: 18px; margin: 0; font-size: 14px; }
+ul.ticks li { margin: 3px 0; }
+.phases { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.phase { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; border-top: 4px solid var(--accent); }
+.phase .who { font: 13px var(--mono); color: var(--accent); }
+.phase h3 { margin: 4px 0 8px; }
+pre.mermaid { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; overflow-x: auto; margin: 0; }
+
+@media (max-width: 860px) {
+  body { overflow: auto; }
+  main { min-height: 0; }
+  [role="tabpanel"] { position: static; }
+  #tab-kart { display: flex; flex-direction: column-reverse; }
+  .map-wrap { height: 58vh; flex: none; }
+  #chat { border-right: 0; border-top: 1px solid var(--line); min-height: 70vh; }
+  #info { top: auto; bottom: 10px; right: 10px; left: 10px; width: auto; }
+  #legend { display: none; }
+  .brand p { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--accent)"/><path d="M7 11l6-2.5 6 2.5 6-2.5v13l-6 2.5-6-2.5-6 2.5z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><circle cx="22" cy="10" r="3.6" fill="var(--signal)" stroke="#fff" stroke-width="1.6"/></svg>
+    <div><h1>Kartlab {{name}}</h1><p>Overture Maps · MapLibre · Claude</p></div>
+  </div>
+  <nav role="tablist" aria-label="Visninger">
+    <button role="tab" id="t-kart" aria-controls="tab-kart" aria-selected="true">Kart og KI</button>
+    <button role="tab" id="t-analyse" aria-controls="tab-analyse" aria-selected="false">Claude Code-analysen</button>
+    <button role="tab" id="t-skala" aria-controls="tab-skala" aria-selected="false">100 brukere</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ============ Kart og KI ============ -->
+  <section id="tab-kart" role="tabpanel" aria-labelledby="t-kart">
+    <aside id="chat" aria-label="Spør Claude om kartet">
+      <div class="chat-head">
+        <h2>Spør Claude</h2>
+        <span class="who">bruker din egen Claude-konto</span>
+        <button id="new-chat" type="button">Ny samtale</button>
+      </div>
+      <p id="chat-status" hidden></p>
+      <div id="messages" aria-live="polite">
+        <p class="intro">Still spørsmål om <strong>{{intro}}</strong>. Claude bruker verktøy i denne siden til å søke, telle, lage diagrammer og styre kartet. Alt skjer i nettleseren din.</p>
+      </div>
+      <div id="suggestions">
+        <p>Prøv for eksempel</p>
+{{suggestions}}
+      </div>
+      <form id="ask">
+        <textarea id="q" rows="2" aria-label="Spørsmål til Claude" placeholder="Spør om kartet, f.eks. «Hvor er det tettest med kafeer?»"></textarea>
+        <button id="send" type="submit">Spør</button>
+        <button id="stop" type="button" hidden>Stopp</button>
+      </form>
+      <details id="shared" hidden>
+        <summary>Delte funn i teamet <span id="shared-count">0</span></summary>
+        <ul id="shared-list"></ul>
+      </details>
+    </aside>
+
+    <div class="map-wrap">
+      <div id="map" role="application" aria-label="{{mapLabel}}"></div>
+      <div id="layer-controls"></div>
+      <div id="legend"></div>
+      <article id="info" hidden>
+        <button class="close" type="button" aria-label="Lukk">×</button>
+        <div class="info-body"></div>
+      </article>
+      <div id="loader" data-bytes="__TOTAL_BYTES__">
+        <strong>Kartlab {{name}}</strong>
+        <span class="track"><span id="load-bar"></span></span>
+        <span id="load-text">Laster Overture-data …</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Claude Code-analysen ============ -->
+  <section id="tab-analyse" class="page" role="tabpanel" aria-labelledby="t-analyse" hidden>
+    <div class="page-inner">
+      <div>
+        <p class="kicker">Hvorfor Claude Code for geodata</p>
+        <h2>{{headline}}</h2>
+        <p class="lede">Alt du ser i denne appen ble laget av <strong>Claude Code i én økt</strong>: Claude fant datakildene, skrev uttrekks- og analyseskriptene, kjørte dem, kontrollerte resultatene og bygde siden. Tallene under kommer rett fra den kjøringen (Overture <span id="release-a"></span>).</p>
+      </div>
+
+      <div class="kpis">
+        <div class="kpi"><div class="v" id="k-steder">–</div><div class="l">steder hentet og klassifisert</div></div>
+        <div class="kpi"><div class="v" id="k-bygg">–</div><div class="l">bygninger med fotavtrykk i UTM33</div></div>
+        <div class="kpi"><div class="v" id="k-hoyde">–</div><div class="l">bygninger med målt høyde</div></div>
+        <div class="kpi"><div class="v" id="k-etasjer">–</div><div class="l">bygninger med antall etasjer</div></div>
+        <div class="kpi"><div class="v" id="k-tid">–</div><div class="l">samlet kjøretid for DuckDB-analysen</div></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <h3>Slik jobbet Claude Code</h3>
+          <ol class="pipeline">
+            <li><div><strong>Fant dataene</strong><p>Listet Overtures S3-bøtte, fant nyeste utgave og lastet ned skjemaet for hvert tema.</p></div></li>
+            <li><div><strong>Skrev et PMTiles-klipp</strong><p>Det fantes ikke noe ferdig verktøy i miljøet, så Claude skrev en PMTiles v3-skriver i Node som {{clipText}} og fjerner felt kartet ikke trenger.</p></div></li>
+            <li><div><strong>Analyserte med DuckDB</strong><p>{{duckText}}</p></div></li>
+            <li><div><strong>Løste hindringer underveis</strong><p>Utvidelser som ikke kunne lastes ned, en proxy som la inn falsk AWS-nøkkel og en for stor flisfil ble feilsøkt og løst uten menneskelig hjelp.</p></div></li>
+            <li><div><strong>Bygde og publiserte appen</strong><p>Kart, KI-verktøy og denne siden, publisert privat på claude.ai.</p></div></li>
+          </ol>
+        </div>
+        <div class="panel">
+          <h3>Kjøringen, steg for steg</h3>
+          <ul class="timed" id="a-steg"></ul>
+          <p class="src" style="margin-top:10px">Kilde: <code>s3://overturemaps-us-west-2/release/…</code>, lest med DuckDB (httpfs + spatial).</p>
+          <h3 style="margin-top:18px">Høyeste bygninger</h3>
+          <ul class="timed" id="a-hoyeste"></ul>
+          <small>* estimert fra etasjer × 3,2 m</small>
+          <h3 style="margin-top:18px">Største bygninger (fotavtrykk)</h3>
+          <ul class="timed" id="a-storste"></ul>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel"><h3>Steder per gruppe</h3><div id="a-grupper"></div></div>
+        <div class="panel"><h3>Bygninger etter høyde</h3><div id="a-hoyde"></div><p class="src" style="margin-top:6px">{{qualityNote}}</p><h3 style="margin-top:16px">Hvem har levert stedsdataene</h3><div id="a-kilder"></div><small>Et sted kan ha flere kilder. Overture slår dem sammen og gir hvert sted én global ID (GERS).</small></div>
+      </div>
+
+      <div class="panel">
+        <h3>{{tableTitle}}</h3>
+        <div class="table-wrap">
+          <table id="a-bydeler">
+            <thead><tr><th scope="col">{{areaTitle}}</th><th scope="col">km²</th><th scope="col">Steder</th><th scope="col">Servering</th><th scope="col">Bygninger</th><th scope="col">Snitthøyde (m)</th><th scope="col">Steder per km²</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <small>{{tableNote}}</small>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <h3>Et utdrag av SQL-en Claude skrev</h3>
+<pre class="code">{{sql}}</pre>
+        </div>
+        <div class="panel">
+          <h3>Hva dette viser</h3>
+          <ul class="ticks">
+            <li><strong>Skybasert uten servere:</strong> GeoParquet og PMTiles leses direkte fra objektlagring. Ingen PostGIS eller GeoServer å drifte.</li>
+            <li><strong>Analytikeren beskriver, Claude Code utfører:</strong> spørsmål på norsk blir til SQL, skript, kart og rapport.</li>
+            <li><strong>Etterprøvbart:</strong> skriptene ligger i repoet (<code>ai-demo/scripts/</code>) og kan kjøres på nytt for neste Overture-utgave.</li>
+            <li><strong>Datakvalitet blir synlig:</strong> kildesporing per objekt, sikkerhetsscore på steder og hvor stor andel som har høyde.</li>
+          </ul>
+          <p class="src">Begrensning: Overture er et åpent, globalt datasett. Kategorier og høyder kan mangle eller være feil, og bør kontrolleres mot autoritative kilder før beslutninger.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Skalering ============ -->
+  <section id="tab-skala" class="page" role="tabpanel" aria-labelledby="t-skala" hidden>
+    <div class="page-inner">
+      <div>
+        <p class="kicker">Fra demo til 100 interne brukere</p>
+        <h2>Samme oppskrift, uten egen KI-infrastruktur</h2>
+        <p class="lede">Appen trenger ingen server og ingen API-nøkkel. Hver bruker logger inn med sin egen Claude-konto, og bruken belastes den kontoen. Det som må på plass for 100 brukere er <strong>lisenser, datadeling og felles arbeidsmåter</strong>, ikke drift.</p>
+      </div>
+
+<pre class="mermaid">
+flowchart LR
+  subgraph Brukere["100 brukere i organisasjonen"]
+    U1["Saksbehandlere og ledere<br/>bruker KI-kart i Claude"]
+    U2["GIS-analytikere<br/>bruker Claude Code"]
+  end
+  subgraph Claude["Claude Team / Enterprise"]
+    A["Delte Artifacts<br/>kart + KI-verktøy"]
+    CC["Claude Code<br/>felles repo, skills og regler"]
+    M["Koblinger (MCP)<br/>interne GIS-API-er"]
+  end
+  subgraph Data["Egen objektlagring (S3 / Azure Blob)"]
+    P["PMTiles<br/>kartfliser"]
+    G["GeoParquet<br/>analysedata"]
+  end
+  O["Overture, Kartverket,<br/>egne fagdata"] -->|planlagt jobb| G
+  G --> P
+  U1 --> A
+  U2 --> CC
+  CC -->|DuckDB| G
+  CC -->|publiserer| A
+  CC --> M
+  A -->|leser| P
+</pre>
+
+      <div class="compare">
+        <div class="panel">
+          <h3><span class="tag">Brukerflate</span></h3>
+          <ul class="ticks">
+            <li>Artifacts deles innad i organisasjonen med lenke og tilgangsnivå.</li>
+            <li>KI-spørsmål går på hver brukers egen Claude-plass. Ingen nøkler i koden.</li>
+            <li>Delte funn lagres i appens egen database og er synlige for kollegene.</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3><span class="tag">Data</span></h3>
+          <ul class="ticks">
+            <li>GeoParquet og PMTiles i egen bøtte, oppdatert av en planlagt jobb.</li>
+            <li>Samme filer brukes av kart, DuckDB, QGIS og GeoLibre.</li>
+            <li>Sensitive data blir i egne systemer og nås via MCP-koblinger med brukerens tilgang.</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3><span class="tag">Analytikere</span></h3>
+          <ul class="ticks">
+            <li>Ett repo med <code>CLAUDE.md</code> (koordinatsystem, datakilder, navngiving).</li>
+            <li>Egne skills, for eksempel «Overture-uttrekk», «bydelsanalyse» og «publiser kart», distribuert som plugin.</li>
+            <li>Claude Code på web eller i terminal, med styrt nettverkstilgang.</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3><span class="tag">Styring</span></h3>
+          <ul class="ticks">
+            <li>Enterprise gir blant annet SSO, brukerstyring og administrasjon av tilganger.</li>
+            <li>Anthropic trener ikke modeller på data fra kommersielle planer som standard.</li>
+            <li>Retningslinjer for hvilke data som kan brukes med KI, og menneskelig kontroll av resultater.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div>
+        <h3>En realistisk innføringsplan</h3>
+        <div class="phases">
+          <div class="phase"><div class="who">5 personer · 4 uker</div><h3>Pilot</h3><ul class="ticks"><li>To GIS-analytikere og tre fagbrukere.</li><li>Lag repo, <code>CLAUDE.md</code> og to–tre skills for vanlige analyser.</li><li>Én delt KI-kartapp på egne data.</li><li>Mål tidsbruk før og etter på 3–5 reelle oppgaver.</li></ul></div>
+          <div class="phase"><div class="who">25 personer · 2–3 måneder</div><h3>Utvidelse</h3><ul class="ticks"><li>Egen bøtte med GeoParquet og PMTiles og nattlig oppdatering.</li><li>MCP-kobling til internt kartgrensesnitt eller database.</li><li>Opplæring: «å spørre godt», kildekritikk og kontroll av tall.</li></ul></div>
+          <div class="phase"><div class="who">100 personer · løpende</div><h3>Drift</h3><ul class="ticks"><li>Skills og maler som plugin i organisasjonens katalog.</li><li>Et lite fagmiljø som eier datagrunnlag og maler.</li><li>Jevnlig gjennomgang av bruk, kostnad og kvalitet.</li></ul></div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <h3>Når trengs Claude API i stedet?</h3>
+          <p>Når løsningen skal brukes av folk uten Claude-konto, for eksempel innbyggere på en åpen nettside, eller kjøre automatisk uten en innlogget bruker. Da kalles Claude fra en liten tjeneste som holder nøkkelen, med bruksgrenser. Kartverktøyene i denne appen kan gjenbrukes nesten uendret.</p>
+        </div>
+        <div class="panel">
+          <h3>Dette kan dere vise kolleger i dag</h3>
+          <ul class="ticks">
+            <li>Spør i kartet og se Claude bruke verktøy, tegne diagram og flytte kartet.</li>
+            <li>Del et funn og åpne det fra en kollegas maskin.</li>
+            <li>Vis analysesiden og skriptene i repoet: alt er etterprøvbart.</li>
+            <li>Be Claude Code lage samme analyse for en annen by. Det tar minutter.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="src">Funksjoner, planer og vilkår endrer seg. Sjekk gjeldende informasjon fra Anthropic før innkjøp.</p>
+    </div>
+  </section>
+</main>
+
+<script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js"></script>
+<script>
+/* APP_JS */
+</script>

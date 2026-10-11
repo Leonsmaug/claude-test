@@ -1,0 +1,445 @@
+{
+ "by": "Kristiansand",
+ "omradetype": "områder (nærmeste bydelsnavn)",
+ "release": "2026-09-23.0",
+ "bbox": [
+  7.9,
+  58.09,
+  8.16,
+  58.205
+ ],
+ "kildedata": "s3://overturemaps-us-west-2/release/2026-09-23.0",
+ "omrader_metode": "voronoi",
+ "antall": {
+  "steder": 4314,
+  "bygninger": 40835,
+  "bygninger_med_hoyde": 20,
+  "bygninger_med_etasjer": 3861,
+  "bydeler": 15
+ },
+ "grupper": [
+  [
+   "Tjenester og kontor",
+   1549
+  ],
+  [
+   "Handel",
+   755
+  ],
+  [
+   "Annet",
+   566
+  ],
+  [
+   "Kultur og utdanning",
+   425
+  ],
+  [
+   "Mat og drikke",
+   334
+  ],
+  [
+   "Reise og overnatting",
+   279
+  ],
+  [
+   "Natur, sport og fritid",
+   275
+  ],
+  [
+   "Helse",
+   131
+  ]
+ ],
+ "toppkategorier": [
+  [
+   "professional_service",
+   190
+  ],
+  [
+   "fashion_and_apparel_store",
+   179
+  ],
+  [
+   "personal_or_beauty_service",
+   172
+  ],
+  [
+   "hardware_home_and_garden_store",
+   171
+  ],
+  [
+   "restaurant",
+   165
+  ],
+  [
+   "home_service",
+   155
+  ],
+  [
+   "social_or_community_service",
+   128
+  ],
+  [
+   "real_estate_service",
+   111
+  ],
+  [
+   "food_and_beverage_store",
+   108
+  ],
+  [
+   "automotive_service",
+   87
+  ],
+  [
+   "corporate_or_business_office",
+   81
+  ],
+  [
+   "historic_site",
+   66
+  ]
+ ],
+ "datasett_steder": [
+  [
+   "Overture",
+   4314
+  ],
+  [
+   "meta",
+   3401
+  ],
+  [
+   "Foursquare",
+   327
+  ],
+  [
+   "Microsoft",
+   269
+  ],
+  [
+   "PinMeTo",
+   231
+  ],
+  [
+   "AllThePlaces",
+   81
+  ],
+  [
+   "DAC",
+   5
+  ]
+ ],
+ "datasett_bygninger": [
+  [
+   "OpenStreetMap",
+   37297
+  ],
+  [
+   "Microsoft ML Buildings",
+   3538
+  ]
+ ],
+ "hoydefordeling": [
+  [
+   "0–10 m",
+   3358
+  ],
+  [
+   "10–20 m",
+   450
+  ],
+  [
+   "20–30 m",
+   42
+  ],
+  [
+   "30–50 m",
+   21
+  ]
+ ],
+ "hoyeste": [
+  [
+   "apartments",
+   38.4,
+   7.949184,
+   58.154558,
+   true
+  ],
+  [
+   "apartments",
+   35.2,
+   7.996669,
+   58.151221,
+   true
+  ],
+  [
+   "apartments",
+   35.2,
+   7.957997,
+   58.14594,
+   true
+  ],
+  [
+   "apartments",
+   35.2,
+   7.949582,
+   58.145681,
+   true
+  ],
+  [
+   "apartments",
+   35.2,
+   7.949743,
+   58.153937,
+   true
+  ],
+  [
+   "apartments",
+   32.0,
+   7.970975,
+   58.14463,
+   true
+  ],
+  [
+   "apartments",
+   32.0,
+   7.964267,
+   58.144666,
+   true
+  ],
+  [
+   "apartments",
+   32.0,
+   7.963158,
+   58.14659,
+   true
+  ]
+ ],
+ "storste": [
+  [
+   "Sørlandssenteret",
+   60189.0,
+   8.129991,
+   58.178798
+  ],
+  [
+   "industrial",
+   28302.0,
+   7.971559,
+   58.138554
+  ],
+  [
+   "IKEA Sørlandet",
+   23091.0,
+   8.158871,
+   58.187047
+  ],
+  [
+   "warehouse",
+   15555.0,
+   8.137383,
+   58.171217
+  ],
+  [
+   "industrial",
+   14374.0,
+   7.965868,
+   58.135994
+  ],
+  [
+   "commercial",
+   12486.0,
+   7.970702,
+   58.12416
+  ],
+  [
+   "hospital",
+   12251.0,
+   7.980256,
+   58.163959
+  ],
+  [
+   "commercial",
+   10934.0,
+   8.125041,
+   58.170063
+  ]
+ ],
+ "bydeler": [
+  [
+   "Kvadraturen",
+   2.888,
+   1552,
+   182,
+   2150,
+   3.9,
+   537.0
+  ],
+  [
+   "Lund",
+   4.213,
+   490,
+   24,
+   4004,
+   7.5,
+   116.0
+  ],
+  [
+   "Hånes",
+   15.551,
+   716,
+   51,
+   2909,
+   null,
+   46.0
+  ],
+  [
+   "Vågsbygd",
+   7.333,
+   264,
+   15,
+   3966,
+   11.3,
+   36.0
+  ],
+  [
+   "Slettheia",
+   3.904,
+   128,
+   2,
+   1674,
+   null,
+   33.0
+  ],
+  [
+   "Tinnheia",
+   3.743,
+   118,
+   5,
+   2250,
+   null,
+   32.0
+  ],
+  [
+   "Grim",
+   5.449,
+   154,
+   15,
+   2045,
+   null,
+   28.0
+  ],
+  [
+   "Søm",
+   8.125,
+   180,
+   7,
+   4684,
+   null,
+   22.0
+  ],
+  [
+   "Gimlekollen",
+   8.313,
+   175,
+   9,
+   3400,
+   null,
+   21.0
+  ],
+  [
+   "Voiebyen",
+   12.016,
+   180,
+   7,
+   4475,
+   null,
+   15.0
+  ],
+  [
+   "Justvik",
+   7.518,
+   51,
+   1,
+   1787,
+   null,
+   7.0
+  ],
+  [
+   "Hamresanden",
+   6.916,
+   47,
+   3,
+   798,
+   null,
+   7.0
+  ],
+  [
+   "Hellemyr",
+   8.19,
+   52,
+   4,
+   1626,
+   null,
+   6.0
+  ],
+  [
+   "Randesund",
+   22.802,
+   87,
+   6,
+   3830,
+   null,
+   4.0
+  ],
+  [
+   "Strai",
+   17.157,
+   55,
+   2,
+   1108,
+   8.9,
+   3.0
+  ]
+ ],
+ "steg": [
+  {
+   "steg": "Hent steder fra S3 (GeoParquet)",
+   "sekunder": 6.7,
+   "hurtigbuffer": true
+  },
+  {
+   "steg": "Hent bygninger fra S3 (GeoParquet)",
+   "sekunder": 111.6,
+   "hurtigbuffer": true
+  },
+  {
+   "steg": "Hent bydelspunkter fra S3 (GeoParquet)",
+   "sekunder": 3.7,
+   "hurtigbuffer": true
+  },
+  {
+   "steg": "Hent vannflater fra S3 (GeoParquet)",
+   "sekunder": 16.4,
+   "hurtigbuffer": true
+  },
+  {
+   "steg": "Klassifiser steder",
+   "sekunder": 0.1
+  },
+  {
+   "steg": "Beregn bygningsareal og høyder (UTM33)",
+   "sekunder": 0.9
+  },
+  {
+   "steg": "Lag områder rundt bydelspunkter (Voronoi i UTM33) og klipp bort vann",
+   "sekunder": 4.2
+  },
+  {
+   "steg": "Koble steder og bygninger til områdene",
+   "sekunder": 2.6
+  }
+ ]
+}

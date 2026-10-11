@@ -17,6 +17,10 @@ export type OverlayId = "buildings3d" | "places" | "addresses" | "boundaries" | 
 
 export interface MapState {
   release: string;
+  /** Overstyrer hvor Overture-temaene hentes fra (f.eks. lokale utsnitt). */
+  tileUrl?: (theme: Parameters<typeof overtureUrl>[1]) => string;
+  /** Overstyrer glyf-adressen. */
+  glyphs?: string;
   basemap: BasemapId;
   overlays: Set<OverlayId>;
   terrain: boolean;
@@ -129,10 +133,10 @@ const OVERTURE_ATTRIBUTION =
   '<a href="https://overturemaps.org" target="_blank" rel="noopener">© Overture Maps Foundation</a> · ' +
   '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap-bidragsytere</a>';
 
-function overtureSource(release: string, theme: Parameters<typeof overtureUrl>[1]): SourceSpecification {
+function overtureSource(state: MapState, theme: Parameters<typeof overtureUrl>[1]): SourceSpecification {
   return {
     type: "vector",
-    url: `pmtiles://${overtureUrl(release, theme)}`,
+    url: state.tileUrl ? state.tileUrl(theme) : `pmtiles://${overtureUrl(state.release, theme)}`,
     attribution: OVERTURE_ATTRIBUTION,
   };
 }
@@ -512,6 +516,7 @@ export const PLACE_GROUPS: { id: string; label: string; color: string; match: st
   { id: "culture", label: "Kultur og utdanning", color: "#1971c2", match: ["school", "college", "university", "library", "museum", "gallery", "education", "learning", "theatre", "theater", "music_venue", "arts", "historic", "worship", "cinema"] },
   { id: "travel", label: "Reise og overnatting", color: "#0c8599", match: ["hotel", "lodging", "hostel", "travel", "transportation", "station", "airport", "parking"] },
   { id: "outdoor", label: "Natur, sport og fritid", color: "#2f9e44", match: ["park", "gym", "sport", "fitness", "playground", "beach", "trail", "golf", "swimming", "recreation"] },
+  { id: "services", label: "Tjenester og kontor", color: "#a07a2c", match: ["service", "office", "agency", "professional", "real_estate", "media", "attorney", "law_firm", "financial", "bank", "organization", "union", "consult"] },
 ];
 
 function placeColor(): ExpressionSpecification {
@@ -739,14 +744,13 @@ function utilityLayers(state: MapState): LayerSpecification[] {
 const EMPTY: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
 
 function commonSources(state: MapState): Record<string, SourceSpecification> {
-  const r = state.release;
   return {
-    base: overtureSource(r, "base"),
-    transportation: overtureSource(r, "transportation"),
-    buildings: overtureSource(r, "buildings"),
-    divisions: overtureSource(r, "divisions"),
-    places: overtureSource(r, "places"),
-    addresses: overtureSource(r, "addresses"),
+    base: overtureSource(state, "base"),
+    transportation: overtureSource(state, "transportation"),
+    buildings: overtureSource(state, "buildings"),
+    divisions: overtureSource(state, "divisions"),
+    places: overtureSource(state, "places"),
+    addresses: overtureSource(state, "addresses"),
     dem: {
       type: "raster-dem",
       tiles: [TERRAIN_TILES],
@@ -824,7 +828,7 @@ export async function composeStyle(state: MapState): Promise<StyleSpecification>
     style = {
       version: 8,
       name: "Kartinnsyn – Overture",
-      glyphs: glyphsUrl(),
+      glyphs: state.glyphs ?? glyphsUrl(),
       sources,
       layers: [...baseLayers, ...overlays, ...labels, ...utilityLayers(state)],
     };

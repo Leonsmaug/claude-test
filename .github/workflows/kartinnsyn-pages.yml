@@ -30,6 +30,31 @@ jobs:
           cache-dependency-path: kartinnsyn/package-lock.json
       - run: npm ci
       - run: npm run build
+
+      # Kartlab: datagrunnlaget lages fra Overture (S3) og bygges for alle byer.
+      # Uttrekkene caches per innstilling i areas.json, så de hentes bare på nytt ved endring.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install duckdb
+      - uses: actions/cache@v4
+        with:
+          path: |
+            kartinnsyn/ai-demo/data*/
+            /tmp/overture-cache
+          key: kartlab-data-${{ hashFiles('kartinnsyn/ai-demo/areas.json', 'kartinnsyn/ai-demo/scripts/*') }}
+      - name: Lag Kartlab-data (hopper over byer som finnes i cachen)
+        run: |
+          for k in $(node -e "console.log(Object.keys(require('./ai-demo/areas.json')).filter(k=>!k.startsWith('_')).join(' '))"); do
+            dir=$(node -e "console.log(require('./ai-demo/areas.json')['$k'].data)")
+            if [ -f "ai-demo/$dir/transportation.pmtiles" ] && [ -f "ai-demo/$dir/places.json" ]; then
+              echo "$k: bruker cachet data"
+            else
+              npm run kartlab:data -- "$k"
+            fi
+          done
+      - run: npm run kartlab:build
+      - run: cp -r ai-demo/dist dist/kartlab
       - uses: actions/upload-pages-artifact@v3
         with:
           path: kartinnsyn/dist
