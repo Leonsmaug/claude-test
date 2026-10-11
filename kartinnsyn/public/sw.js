@@ -1,6 +1,6 @@
 // Service worker for appskallet. Kartdata (PMTiles-områdeforespørsler, fliser,
 // geokoding) går alltid rett til nettet; bare appens egne filer og glyfer caches.
-const CACHE = "kartinnsyn-v1";
+const CACHE = "kartinnsyn-v2";
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(["./", "./index.html", "./icon.svg", "./manifest.webmanifest"])));
@@ -18,9 +18,13 @@ self.addEventListener("fetch", (e) => {
   const req = e.request;
   const url = new URL(req.url);
   if (req.method !== "GET" || url.origin !== location.origin || req.headers.has("range")) return;
+  // Kartlab-sidene under kartlab/ er egne apper med store datafiler; de håndteres ikke her.
+  const scope = new URL(self.registration.scope).pathname;
+  if (url.pathname.startsWith(scope + "kartlab/")) return;
 
   // Navigasjon: nettverk først, så cache (fungerer offline med sist kjente versjon).
   if (req.mode === "navigate") {
+    if (url.pathname !== scope && url.pathname !== scope + "index.html") return;
     e.respondWith(
       fetch(req)
         .then((res) => {

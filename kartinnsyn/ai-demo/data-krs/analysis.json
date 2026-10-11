@@ -427,19 +427,19 @@
   },
   {
    "steg": "Klassifiser steder",
-   "sekunder": 0.0
+   "sekunder": 0.1
   },
   {
    "steg": "Beregn bygningsareal og høyder (UTM33)",
-   "sekunder": 0.2
+   "sekunder": 0.9
   },
   {
    "steg": "Lag områder rundt bydelspunkter (Voronoi i UTM33) og klipp bort vann",
-   "sekunder": 3.6
+   "sekunder": 4.2
   },
   {
    "steg": "Koble steder og bygninger til områdene",
-   "sekunder": 2.9
+   "sekunder": 2.6
   }
  ]
 }

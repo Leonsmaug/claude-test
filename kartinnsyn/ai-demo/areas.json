@@ -1,7 +1,18 @@
 {
+  "_overture": {
+    "tiles": "2026-09-23.1",
+    "parquet": "2026-09-23.0"
+  },
   "kristiansand": {
     "name": "Kristiansand",
     "data": "data-krs",
+    "bbox": [
+      7.9,
+      58.09,
+      8.16,
+      58.205
+    ],
+    "omrader": "voronoi",
     "start": {
       "center": [
         7.9955,
@@ -48,6 +59,13 @@
   "oslo": {
     "name": "Oslo",
     "data": "data",
+    "bbox": [
+      10.68,
+      59.895,
+      10.83,
+      59.945
+    ],
+    "omrader": "polygoner",
     "start": {
       "center": [
         10.7475,

@@ -12,23 +12,45 @@ Fanene:
 2. **Claude Code-analysen**: hva Claude Code gjorde, med de faktiske tallene og kjøretidene.
 3. **100 brukere**: arkitektur og innføringsplan for en organisasjon.
 
-## Slik lages den
+## Kjør den
 
-Byspesifikk tekst, startvisning og eksempelspørsmål ligger i `areas.json`.
+| Hvor | Lenke | KI-chat |
+| --- | --- | --- |
+| claude.ai (privat Artifact) | [Kristiansand](https://claude.ai/artifact/28thskcBQKJSz3KG78nB1m) · [Oslo](https://claude.ai/artifact/DyJRAYwSfmNBETUERWvkK1) | Ja, på hver brukers Claude-konto |
+| GitHub Pages | `<pages-adresse>/kartlab/` (bygges av arbeidsflyten ved push til `main`) | Nei, kart og analyse |
+| Lokalt | `npm run kartlab` → http://localhost:4180/ | Nei, kart og analyse |
+
+### Lokalt, fra en fersk kopi av repoet
 
 ```bash
-# Kristiansand by (Overture har ikke bydelsgrenser her: områder lages rundt navngitte bydelspunkter)
-node ai-demo/scripts/extract-pmtiles.mjs 2026-09-23.1 7.90,58.09,8.16,58.205 12 14 ai-demo/data-krs
-python ai-demo/scripts/analyse.py --by Kristiansand --bbox 7.90,58.09,8.16,58.205 --omrader voronoi --out ai-demo/data-krs
-node ai-demo/build.mjs kristiansand     # -> ai-demo/dist/kristiansand/
-
-# Sentrale Oslo (bruker Overtures bydelspolygoner)
-node ai-demo/scripts/extract-pmtiles.mjs 2026-09-23.1 10.68,59.895,10.83,59.945 12 14 ai-demo/data
-python ai-demo/scripts/analyse.py --by Oslo --bbox 10.68,59.895,10.83,59.945 --omrader polygoner --out ai-demo/data
-node ai-demo/build.mjs oslo             # -> ai-demo/dist/oslo/
+cd kartinnsyn
+npm install
+pip install duckdb                 # Python 3.10+
+npm run kartlab:data               # henter og analyserer Overture for alle byer (ca. 5 min)
+npm run kartlab                    # bygger begge byene og åpner startsiden
 ```
 
-En ny by legges til med et nytt utsnitt, en kjøring av analysen og en oppføring i `areas.json`.
+`npm run kartlab:data -- kristiansand` lager data for én by. Byspesifikke innstillinger
+(utsnitt, områdemetode, tekster, startvisning og eksempelspørsmål) og hvilke Overture-utgaver
+som brukes, ligger i `areas.json`.
+
+### Slik lages dataene
+
+`scripts/prepare-data.mjs` kjører to steg per by:
+
+1. `extract-pmtiles.mjs` klipper byen ut av Overtures PMTiles i S3 (zoom 12–14) og fjerner felt kartet ikke trenger.
+2. `analyse.py` analyserer Overtures GeoParquet med DuckDB. Med `--omrader polygoner` brukes Overtures
+   bydelsgrenser (Oslo). Med `--omrader voronoi` lages områder rundt navngitte bydelspunkter i UTM33,
+   minus vann (Kristiansand, der Overture mangler bydelsgrenser).
+
+En ny by legges til med en oppføring i `areas.json`, `npm run kartlab:data -- <by>` og `npm run kartlab:build`.
+
+### Publisering
+
+- **claude.ai:** `ai-demo/dist/<by>/kartlab.html` publiseres som Artifact med `data/` og `fonts/` som
+  vedlagte filer og kapabilitetene `sample`, `db`, `user` og `downloads`.
+- **GitHub Pages:** `.github/workflows/kartinnsyn-pages.yml` lager dataene (cachet mellom kjøringer),
+  bygger begge byene og legger dem under `kartlab/` ved siden av kartinnsynet.
 
 ### Datakvalitet som analysen avdekket
 
@@ -36,9 +58,6 @@ I Kristiansand har bare 20 av 40 835 bygninger målt høyde i Overture, mot 15 1
 33 423 i sentrale Oslo. Der målt høyde mangler, brukes etasjer × 3,2 m (3 861 bygninger
 i Kristiansand har etasjer). Claude får beskjed om dette og sier fra når svar bygger på
 estimerte høyder.
-
-`ai-demo/dist/<område>/` publiseres som Artifact med kapabilitetene `sample` (spør Claude),
-`db` (delte funn), `user` (navn på kolleger) og `downloads` (nedlasting).
 
 Artifact-sider kan bare lese filer som publiseres sammen med siden, og bare vanlige
 web-filtyper. Derfor ligger kartflisene som utsnitt, pakket som base64-tekst, og leses med

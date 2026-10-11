@@ -9,7 +9,11 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p ai-demo/tsconfig.json",
+    "kartlab:data": "node ai-demo/scripts/prepare-data.mjs",
+    "kartlab:build": "tsc --noEmit -p ai-demo/tsconfig.json && node ai-demo/build.mjs",
+    "kartlab:serve": "vite preview --outDir ai-demo/dist --port 4180 --open",
+    "kartlab": "npm run kartlab:build && npm run kartlab:serve"
   },
   "dependencies": {
     "@geolibre/core": "3.3.0",
