@@ -1,4 +1,4 @@
-<title>Kartlab Oslo</title>
+<title>Kartlab {{name}}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" />
 <style>
@@ -209,7 +209,7 @@ pre.mermaid { background: var(--surface); border: 1px solid var(--line); border-
 <header class="top">
   <div class="brand">
     <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--accent)"/><path d="M7 11l6-2.5 6 2.5 6-2.5v13l-6 2.5-6-2.5-6 2.5z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><circle cx="22" cy="10" r="3.6" fill="var(--signal)" stroke="#fff" stroke-width="1.6"/></svg>
-    <div><h1>Kartlab Oslo</h1><p>Overture Maps · MapLibre · Claude</p></div>
+    <div><h1>Kartlab {{name}}</h1><p>Overture Maps · MapLibre · Claude</p></div>
   </div>
   <nav role="tablist" aria-label="Visninger">
     <button role="tab" id="t-kart" aria-controls="tab-kart" aria-selected="true">Kart og KI</button>
@@ -229,15 +229,11 @@ pre.mermaid { background: var(--surface); border: 1px solid var(--line); border-
       </div>
       <p id="chat-status" hidden></p>
       <div id="messages" aria-live="polite">
-        <p class="intro">Still spørsmål om <strong>steder, bygninger og bydeler i sentrale Oslo</strong>. Claude bruker verktøy i denne siden til å søke, telle, lage diagrammer og styre kartet. Alt skjer i nettleseren din.</p>
+        <p class="intro">Still spørsmål om <strong>{{intro}}</strong>. Claude bruker verktøy i denne siden til å søke, telle, lage diagrammer og styre kartet. Alt skjer i nettleseren din.</p>
       </div>
       <div id="suggestions">
         <p>Prøv for eksempel</p>
-        <button type="button" data-q="Hvilke bydeler har flest serveringssteder per km²? Vis det i kartet og som diagram.">Hvilke bydeler har flest serveringssteder per km²?</button>
-        <button type="button" data-q="Finn de 10 høyeste bygningene og vis dem i 3D med høydefarger.">Finn de 10 høyeste bygningene og vis dem i 3D</button>
-        <button type="button" data-q="Hvor mange apotek ligger innen 500 meter fra Oslo S? List dem med avstand.">Hvor mange apotek ligger innen 500 m fra Oslo S?</button>
-        <button type="button" data-q="Sammenlign Grünerløkka og Frogner: antall steder, fordeling på grupper og snitthøyde på bygningene.">Sammenlign Grünerløkka og Frogner</button>
-        <button type="button" data-q="Hva slags steder dominerer i kartutsnittet jeg ser på nå? Lag et diagram.">Hva dominerer i kartutsnittet jeg ser nå?</button>
+{{suggestions}}
       </div>
       <form id="ask">
         <textarea id="q" rows="2" aria-label="Spørsmål til Claude" placeholder="Spør om kartet, f.eks. «Hvor er det tettest med kafeer?»"></textarea>
@@ -251,7 +247,7 @@ pre.mermaid { background: var(--surface); border: 1px solid var(--line); border-
     </aside>
 
     <div class="map-wrap">
-      <div id="map" role="application" aria-label="Kart over sentrale Oslo"></div>
+      <div id="map" role="application" aria-label="{{mapLabel}}"></div>
       <div id="layer-controls"></div>
       <div id="legend"></div>
       <article id="info" hidden>
@@ -259,7 +255,7 @@ pre.mermaid { background: var(--surface); border: 1px solid var(--line); border-
         <div class="info-body"></div>
       </article>
       <div id="loader" data-bytes="__TOTAL_BYTES__">
-        <strong>Kartlab Oslo</strong>
+        <strong>Kartlab {{name}}</strong>
         <span class="track"><span id="load-bar"></span></span>
         <span id="load-text">Laster Overture-data …</span>
       </div>
@@ -271,14 +267,15 @@ pre.mermaid { background: var(--surface); border: 1px solid var(--line); border-
     <div class="page-inner">
       <div>
         <p class="kicker">Hvorfor Claude Code for geodata</p>
-        <h2>Fra «finn ut hva Overture har om Oslo» til ferdig datagrunnlag, uten GIS-server</h2>
+        <h2>{{headline}}</h2>
         <p class="lede">Alt du ser i denne appen ble laget av <strong>Claude Code i én økt</strong>: Claude fant datakildene, skrev uttrekks- og analyseskriptene, kjørte dem, kontrollerte resultatene og bygde siden. Tallene under kommer rett fra den kjøringen (Overture <span id="release-a"></span>).</p>
       </div>
 
       <div class="kpis">
         <div class="kpi"><div class="v" id="k-steder">–</div><div class="l">steder hentet og klassifisert</div></div>
         <div class="kpi"><div class="v" id="k-bygg">–</div><div class="l">bygninger med fotavtrykk i UTM33</div></div>
-        <div class="kpi"><div class="v" id="k-hoyde">–</div><div class="l">bygninger med kjent høyde</div></div>
+        <div class="kpi"><div class="v" id="k-hoyde">–</div><div class="l">bygninger med målt høyde</div></div>
+        <div class="kpi"><div class="v" id="k-etasjer">–</div><div class="l">bygninger med antall etasjer</div></div>
         <div class="kpi"><div class="v" id="k-tid">–</div><div class="l">samlet kjøretid for DuckDB-analysen</div></div>
       </div>
 
@@ -287,8 +284,8 @@ pre.mermaid { background: var(--surface); border: 1px solid var(--line); border-
           <h3>Slik jobbet Claude Code</h3>
           <ol class="pipeline">
             <li><div><strong>Fant dataene</strong><p>Listet Overtures S3-bøtte, fant nyeste utgave og lastet ned skjemaet for hvert tema.</p></div></li>
-            <li><div><strong>Skrev et PMTiles-klipp</strong><p>Det fantes ikke noe ferdig verktøy i miljøet, så Claude skrev en PMTiles v3-skriver i Node som klipper Oslo ut av 500 GB med fliser og fjerner felt kartet ikke trenger.</p></div></li>
-            <li><div><strong>Analyserte med DuckDB</strong><p>Spørringer rett mot GeoParquet på S3 leser bare radgruppene i Oslo. Areal regnes i EUREF89 UTM 33, og steder knyttes til bydel med punkt-i-polygon.</p></div></li>
+            <li><div><strong>Skrev et PMTiles-klipp</strong><p>Det fantes ikke noe ferdig verktøy i miljøet, så Claude skrev en PMTiles v3-skriver i Node som {{clipText}} og fjerner felt kartet ikke trenger.</p></div></li>
+            <li><div><strong>Analyserte med DuckDB</strong><p>{{duckText}}</p></div></li>
             <li><div><strong>Løste hindringer underveis</strong><p>Utvidelser som ikke kunne lastes ned, en proxy som la inn falsk AWS-nøkkel og en for stor flisfil ble feilsøkt og løst uten menneskelig hjelp.</p></div></li>
             <li><div><strong>Bygde og publiserte appen</strong><p>Kart, KI-verktøy og denne siden, publisert privat på claude.ai.</p></div></li>
           </ol>
@@ -297,45 +294,34 @@ pre.mermaid { background: var(--surface); border: 1px solid var(--line); border-
           <h3>Kjøringen, steg for steg</h3>
           <ul class="timed" id="a-steg"></ul>
           <p class="src" style="margin-top:10px">Kilde: <code>s3://overturemaps-us-west-2/release/…</code>, lest med DuckDB (httpfs + spatial).</p>
-          <h3 style="margin-top:18px">Høyeste bygninger i utsnittet</h3>
+          <h3 style="margin-top:18px">Høyeste bygninger</h3>
           <ul class="timed" id="a-hoyeste"></ul>
+          <small>* estimert fra etasjer × 3,2 m</small>
+          <h3 style="margin-top:18px">Største bygninger (fotavtrykk)</h3>
+          <ul class="timed" id="a-storste"></ul>
         </div>
       </div>
 
       <div class="grid-2">
         <div class="panel"><h3>Steder per gruppe</h3><div id="a-grupper"></div></div>
-        <div class="panel"><h3>Bygninger etter høyde</h3><div id="a-hoyde"></div><h3 style="margin-top:16px">Hvem har levert stedsdataene</h3><div id="a-kilder"></div><small>Et sted kan ha flere kilder. Overture slår dem sammen og gir hvert sted én global ID (GERS).</small></div>
+        <div class="panel"><h3>Bygninger etter høyde</h3><div id="a-hoyde"></div><p class="src" style="margin-top:6px">{{qualityNote}}</p><h3 style="margin-top:16px">Hvem har levert stedsdataene</h3><div id="a-kilder"></div><small>Et sted kan ha flere kilder. Overture slår dem sammen og gir hvert sted én global ID (GERS).</small></div>
       </div>
 
       <div class="panel">
-        <h3>Bydelene sammenlignet (innenfor utsnittet)</h3>
+        <h3>{{tableTitle}}</h3>
         <div class="table-wrap">
           <table id="a-bydeler">
-            <thead><tr><th scope="col">Bydel</th><th scope="col">km²</th><th scope="col">Steder</th><th scope="col">Servering</th><th scope="col">Bygninger</th><th scope="col">Snitthøyde (m)</th><th scope="col">Steder per km²</th></tr></thead>
+            <thead><tr><th scope="col">{{areaTitle}}</th><th scope="col">km²</th><th scope="col">Steder</th><th scope="col">Servering</th><th scope="col">Bygninger</th><th scope="col">Snitthøyde (m)</th><th scope="col">Steder per km²</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
-        <small>Bydelsgrensene er klippet til kartutsnittet, så areal og antall gjelder bare den delen av bydelen som er med.</small>
+        <small>{{tableNote}}</small>
       </div>
 
       <div class="grid-2">
         <div class="panel">
           <h3>Et utdrag av SQL-en Claude skrev</h3>
-<pre class="code">-- Bydeler klippet til utsnittet, areal i UTM33, tetthet per bydel
-WITH clip AS (
-  SELECT names.primary AS name,
-         ST_Intersection(geometry, ST_MakeEnvelope(10.68, 59.895, 10.83, 59.945)) AS geometry
-  FROM districts_raw
-), z AS (
-  SELECT name, geometry,
-         ST_Area(ST_Transform(geometry, 'EPSG:4326', 'EPSG:25833',
-                              always_xy := true)) / 1e6 AS km2
-  FROM clip
-)
-SELECT z.name, z.km2,
-  (SELECT count(*) FROM p
-    WHERE ST_Contains(z.geometry, ST_Point(p.lon, p.lat))) AS steder
-FROM z;</pre>
+<pre class="code">{{sql}}</pre>
         </div>
         <div class="panel">
           <h3>Hva dette viser</h3>

@@ -1,5 +1,5 @@
 /**
- * Kartlab Oslo: kart + Claude som kjører som Artifact på claude.ai.
+ * Kartlab: kart + Claude som kjører som Artifact på claude.ai.
  *
  * Alt kjører i nettleseren. Claude nås gjennom plattformens `sample`-funksjon
  * (brukerens egen Claude-konto, ingen API-nøkkel), og får et sett verktøy som
@@ -45,6 +45,12 @@ type ClaudeRuntime = { use(name: string): Promise<unknown> };
 const runtime = (window as unknown as { claude?: ClaudeRuntime }).claude;
 const use = <T>(name: string) => (runtime ? (runtime.use(name) as Promise<T | null>) : Promise.resolve(null));
 
+/** Byspesifikk konfigurasjon som build.mjs legger inn fra areas.json. */
+const AREA = (window as unknown as { KARTLAB_AREA: {
+  name: string; areaChip: string; areaTitle: string;
+  start: { center: [number, number]; zoom: number; pitch: number; bearing: number };
+} }).KARTLAB_AREA;
+
 const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const nf = (n: number, d = 0) => n.toLocaleString("nb-NO", { maximumFractionDigits: d });
@@ -81,13 +87,15 @@ interface Building {
 interface District {
   type: "Feature";
   geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon;
-  properties: { navn: string; km2: number; steder: number; servering: number; bygninger: number; snitthoyde: number | null; steder_per_km2: number };
+  properties: { navn: string; km2: number; etikett: [number, number]; steder: number; servering: number; bygninger: number; snitthoyde: number | null; steder_per_km2: number };
 }
 interface Analysis {
+  by: string; omradetype: string; omrader_metode: "polygoner" | "voronoi";
   release: string; bbox: number[]; antall: Record<string, number>;
   grupper: [string, number][]; toppkategorier: [string, number][];
   datasett_steder: [string, number][]; datasett_bygninger: [string, number][];
-  hoydefordeling: [string, number][]; hoyeste: [string, number, number, number][];
+  hoydefordeling: [string, number][]; hoyeste: [string, number, number, number, boolean][];
+  storste: [string, number, number, number][];
   bydeler: [string, number, number, number, number, number, number][];
   steg: { steg: string; sekunder: number | null; hurtigbuffer?: boolean }[];
 }
@@ -248,6 +256,14 @@ async function buildStyle(): Promise<StyleSpecification> {
     data: { type: "FeatureCollection", features: places.map((p) => ({ type: "Feature", properties: { g: p.grp }, geometry: { type: "Point", coordinates: [p.lon, p.lat] } })) },
   };
   style.sources.hits = { type: "geojson", data: hits };
+  // Ett etikettpunkt per område, også når området består av mange biter (øyer, nes).
+  style.sources.districtlabels = {
+    type: "geojson",
+    data: {
+      type: "FeatureCollection",
+      features: districtData().features.map((f) => ({ type: "Feature", properties: f.properties, geometry: { type: "Point", coordinates: (f.properties as District["properties"]).etikett } })),
+    },
+  };
 
   const layers = style.layers;
   const insertBefore = (id: string, ...ls: LayerSpecification[]) => {
@@ -275,7 +291,7 @@ async function buildStyle(): Promise<StyleSpecification> {
     layers.push({
       id: "districts-label",
       type: "symbol",
-      source: "districts",
+      source: "districtlabels",
       layout: {
         "text-field": ["concat", ["get", "navn"], "\n", ["to-string", ["get", metric]]],
         "text-font": ["Noto Sans Regular"],
@@ -327,7 +343,8 @@ async function buildStyle(): Promise<StyleSpecification> {
 }
 
 let map: MlMap;
-const BOUNDS: [number, number, number, number] = [10.68, 59.895, 10.83, 59.945];
+/** Målt høyde, ellers estimert fra etasjer (3,2 m per etasje). */
+const estHeight = (b: Building) => b.h ?? (b.floors != null ? Number((b.floors * 3.2).toFixed(1)) : null);
 
 async function refresh() {
   map.setStyle(await buildStyle(), { diff: true });
@@ -366,7 +383,7 @@ function renderLayerControls() {
     chip("buildings3d", "3D-bygg", view.buildings3d),
     chip("heightColor", "Høydefarger", view.heightColor),
     chip("heat", "Varmekart", view.heat),
-    chip("districts", view.districts ? METRIC_LABEL[view.districts] : "Bydelsanalyse", !!view.districts),
+    chip("districts", view.districts ? METRIC_LABEL[view.districts] : AREA.areaChip, !!view.districts),
   ].join("");
   $("#legend").innerHTML = view.districts
     ? `<strong>${METRIC_LABEL[view.districts]}</strong><span class="ramp"></span><small>lav → høy · Claude Code-analyse (DuckDB)</small>`
@@ -390,7 +407,7 @@ function showInfo(f: MapGeoJSONFeature) {
   const card = $("#info");
   if (f.layer.id === "districts-fill") {
     const p = f.properties as District["properties"];
-    card.querySelector(".info-body")!.innerHTML = `<div class="info-kind">Bydel (innenfor utsnittet)</div><h3 class="info-title">${esc(p.navn)}</h3>
+    card.querySelector(".info-body")!.innerHTML = `<div class="info-kind">${esc(AREA.areaTitle)} · ${esc(analysis.omradetype)}</div><h3 class="info-title">${esc(p.navn)}</h3>
       <dl class="info-rows"><dt>Areal</dt><dd>${nf(p.km2, 2)} km²</dd><dt>Steder</dt><dd>${nf(p.steder)}</dd><dt>Servering</dt><dd>${nf(p.servering)}</dd>
       <dt>Bygninger</dt><dd>${nf(p.bygninger)}</dd><dt>Snitthøyde</dt><dd>${p.snitthoyde ?? "–"} m</dd></dl>`;
   } else if (f.layer.id === "hits-circle") {
@@ -531,10 +548,11 @@ const TOOLS: SampleTool[] = [
         for (const b of buildings) {
           if (!area.test(b)) continue;
           total++;
-          const k = by === "bydel" ? b.bydel ?? "utenfor bydel" : by === "hoydeklasse"
-            ? b.h == null ? "ukjent høyde" : b.h < 10 ? "0–10 m" : b.h < 20 ? "10–20 m" : b.h < 30 ? "20–30 m" : b.h < 50 ? "30–50 m" : "50 m +"
+          const h = estHeight(b);
+          const k = by === "bydel" ? b.bydel ?? "utenfor områdene" : by === "hoydeklasse"
+            ? h == null ? "ukjent høyde" : h < 10 ? "0–10 m" : h < 20 ? "10–20 m" : h < 30 ? "20–30 m" : h < 50 ? "30–50 m" : "50 m +"
             : b.subtype ?? "ukjent";
-          add(k, b.h);
+          add(k, h);
         }
       } else {
         activity(`Teller ${nf(places.length)} steder etter ${by} i ${area.label}`);
@@ -542,7 +560,7 @@ const TOOLS: SampleTool[] = [
         for (const p of places) {
           if (!area.test(p) || !matchesGroup(p, i.gruppe) || (cat && !(p.cat ?? "").includes(cat))) continue;
           total++;
-          add(by === "bydel" ? p.bydel ?? "utenfor bydel" : by === "kategori" ? p.cat ?? "ukjent" : p.grp);
+          add(by === "bydel" ? p.bydel ?? "utenfor områdene" : by === "kategori" ? p.cat ?? "ukjent" : p.grp);
         }
       }
       const rows = [...counts.entries()]
@@ -564,7 +582,7 @@ const TOOLS: SampleTool[] = [
   },
   {
     name: "bygninger",
-    description: "Lister bygninger med høyde, etasjer, fotavtrykk og bydel. Kan filtrere på område, minste høyde, minste fotavtrykk og subtype (residential, commercial, education …) og sortere etter høyde, areal eller etasjer. Konstruksjoner under 30 m² (master, skulpturer) utelates som standard. Treffene markeres i kartet.",
+    description: "Lister bygninger med høyde (målt, ellers estimert fra etasjer × 3,2 m), etasjer, fotavtrykk og område. Kan filtrere på område, minste høyde, minste fotavtrykk og subtype (residential, commercial, education …) og sortere etter høyde, areal eller etasjer. Konstruksjoner under 30 m² (master, skulpturer) utelates som standard. Treffene markeres i kartet.",
     inputSchema: {
       type: "object",
       properties: {
@@ -578,15 +596,16 @@ const TOOLS: SampleTool[] = [
     },
     execute(i) {
       const area = areaFilter(i.omrade);
-      const key = ({ hoyde: "h", areal: "area_m2", etasjer: "floors" } as const)[String(i.sorter ?? "hoyde") as "hoyde"] ?? "h";
+      const sorter = String(i.sorter ?? "hoyde");
+      const val = (b: Building) => (sorter === "areal" ? b.area_m2 : sorter === "etasjer" ? b.floors : estHeight(b));
       activity(`Ser på ${nf(buildings.length)} bygninger i ${area.label}`);
       const list = buildings
-        .filter((b) => area.test(b) && (i.min_hoyde == null || (b.h ?? -1) >= Number(i.min_hoyde)) && (!i.subtype || b.subtype === i.subtype))
+        .filter((b) => area.test(b) && (i.min_hoyde == null || (estHeight(b) ?? -1) >= Number(i.min_hoyde)) && (!i.subtype || b.subtype === i.subtype))
         .filter((b) => (b.area_m2 ?? 0) >= Number(i.min_areal ?? 30))
-        .filter((b) => b[key] != null)
-        .sort((a, b) => Number(b[key]) - Number(a[key]));
+        .filter((b) => val(b) != null)
+        .sort((a, b) => Number(val(b)) - Number(val(a)));
       const lim = Math.min(Number(i.grense ?? 10) || 10, 40);
-      const out = list.slice(0, lim).map((b) => ({ navn: b.name ?? b.class ?? b.subtype ?? "Bygning", subtype: b.subtype, hoyde_m: b.h, etasjer: b.floors, areal_m2: b.area_m2, bydel: b.bydel ?? null, lon: b.lon, lat: b.lat }));
+      const out = list.slice(0, lim).map((b) => ({ navn: b.name ?? buildingLabel(b.class ?? b.subtype ?? "Bygning"), subtype: b.subtype, hoyde_m: estHeight(b), hoyde_estimert: b.h == null && b.floors != null, etasjer: b.floors, areal_m2: b.area_m2, bydel: b.bydel ?? null, lon: b.lon, lat: b.lat }));
       lastResult = { title: "bygninger", rows: out };
       setHits(out.map((o) => ({ lon: o.lon, lat: o.lat, navn: `${o.navn}${o.hoyde_m ? ` · ${o.hoyde_m} m` : ""}` })));
       return { antall_som_matcher: list.length, omrade: area.label, viser: out.length, bygninger: out };
@@ -607,7 +626,7 @@ const TOOLS: SampleTool[] = [
         .sort((a, b) => rank(a.name.toLocaleLowerCase("nb-NO")) - rank(b.name.toLocaleLowerCase("nb-NO")) || b.conf - a.conf)
         .slice(0, 6);
       const bs = buildings.filter((b) => (b.name ?? "").toLocaleLowerCase("nb-NO").includes(q)).slice(0, 4);
-      if (!d && !ps.length && !bs.length) throw new Error(`Fant ikke «${i.navn}» i utsnittet (Oslo sentrum ± 4 km). Bruk egne kunnskaper om koordinater om stedet ligger innenfor.`);
+      if (!d && !ps.length && !bs.length) throw new Error(`Fant ikke «${i.navn}» i datasettet for ${AREA.name}. Bruk egne kunnskaper om koordinater om stedet ligger innenfor kartutsnittet.`);
       const center = (g: District["geometry"]) => {
         const ring = g.type === "Polygon" ? g.coordinates[0] : g.coordinates[0][0];
         const xs = ring.map((c) => c[0]);
@@ -713,20 +732,24 @@ let ctl: AbortController | null = null;
 
 function rules() {
   const a = analysis;
-  return `Du er en geodata-analytiker innebygd i kartappen «Kartlab Oslo». Svar på norsk bokmål.
+  const pct = (n: number) => `${nf((n / Math.max(a.antall.bygninger, 1)) * 100, 1)} %`;
+  const areaNote = a.omrader_metode === "voronoi"
+    ? `${a.antall.bydeler} områder laget rundt Overtures navngitte bydelspunkter (nærmeste navn, uten vann). Overture har ikke offisielle bydelsgrenser her, så si «området rundt X», ikke «bydelen X», og nevn at grensene er tilnærmet.`
+    : `${a.antall.bydeler} bydeler fra Overture, klippet til kartutsnittet.`;
+  return `Du er en geodata-analytiker innebygd i kartappen «Kartlab ${AREA.name}». Svar på norsk bokmål.
 
-DATA (Overture Maps ${a.release}, utsnitt av Oslo: lon ${a.bbox[0]}–${a.bbox[2]}, lat ${a.bbox[1]}–${a.bbox[3]}):
-- ${nf(a.antall.steder)} steder (Overture Places: Meta, Foursquare, Microsoft m.fl.) med kategori, gruppe, adresse, sikkerhet (0–1) og bydel.
-- ${nf(a.antall.bygninger)} bygninger (OpenStreetMap og Microsoft), ${nf(a.antall.bygninger_med_hoyde)} med høyde, med fotavtrykk i m² (UTM33) og bydel.
-- ${a.antall.bydeler} bydeler (klippet til utsnittet): ${districts.map((d) => d.properties.navn).join(", ")}.
+DATA (Overture Maps ${a.release}, utsnitt av ${AREA.name}: lon ${a.bbox[0]}–${a.bbox[2]}, lat ${a.bbox[1]}–${a.bbox[3]}):
+- ${nf(a.antall.steder)} steder (Overture Places: Meta, Foursquare, Microsoft m.fl.) med kategori, gruppe, adresse, sikkerhet (0–1) og område.
+- ${nf(a.antall.bygninger)} bygninger (OpenStreetMap og Microsoft) med fotavtrykk i m² (UTM33) og område. Bare ${nf(a.antall.bygninger_med_hoyde)} (${pct(a.antall.bygninger_med_hoyde)}) har målt høyde og ${nf(a.antall.bygninger_med_etasjer)} (${pct(a.antall.bygninger_med_etasjer)}) har antall etasjer; ellers estimeres høyde som etasjer × 3,2 m. Si fra når et svar bygger på estimerte eller manglende høyder.
+- Områder: ${areaNote} Navn: ${districts.map((d) => d.properties.navn).join(", ")}. I verktøyene heter feltet «bydel».
 - Grupper: ${PLACE_GROUPS.map((g) => g.label).join(", ")}, Annet.
 
 SLIK JOBBER DU:
 - Bruk verktøyene for alle tall. Ikke gjett eller finn på tall, steder eller adresser.
 - Når svaret handler om steder eller bygninger: la dem bli markert i kartet (sok_steder og bygninger gjør det) og bruk vis_i_kart med 'tilpass_treff' så brukeren ser dem.
-- Bruk sett_lag når et kartlag gjør svaret tydeligere (bydelsanalyse, varmekart, 3D, høydefarger), og vis_diagram for sammenligninger med 3+ verdier.
+- Bruk sett_lag når et kartlag gjør svaret tydeligere (områdeanalyse via 'bydelsanalyse', varmekart, 3D, høydefarger), og vis_diagram for sammenligninger med 3+ verdier.
 - «Her», «i kartet» eller «det jeg ser» betyr omrade 'utsnitt'. Ellers bruk hele datasettet.
-- Svar kort og konkret: 2–6 setninger eller en kort punktliste, med tallene. Si fra om begrensninger (utsnittet dekker bare sentrale Oslo; Overture-data kan mangle eller ha feil kategori; bydeler er klippet til utsnittet).
+- Svar kort og konkret: 2–6 setninger eller en kort punktliste, med tallene. Si fra om begrensninger (utsnittet dekker bare deler av ${AREA.name}; Overture-data kan mangle eller ha feil kategori).
 - Skriv ikke koordinater i svaret med mindre brukeren ber om det.`;
 }
 
@@ -977,11 +1000,20 @@ $("#shared-list").addEventListener("click", async (e) => {
 
 // ---------- Analyse-fanen (resultatene fra Claude Code) ----------
 
+/** Bygninger uten navn har bare en engelsk Overture-klasse; vis den på norsk. */
+const CLASS_NO: Record<string, string> = {
+  apartments: "Boligblokk", house: "Bolig", industrial: "Industribygg", warehouse: "Lagerbygg", commercial: "Næringsbygg",
+  retail: "Butikkbygg", office: "Kontorbygg", hospital: "Sykehus", school: "Skole", residential: "Boligbygg",
+  church: "Kirke", university: "Universitet", civic: "Offentlig bygg", hotel: "Hotell", parking: "Parkeringshus",
+};
+const buildingLabel = (n: string) => CLASS_NO[n] ?? n;
+
 function renderAnalysis() {
   const a = analysis;
   $("#k-steder").textContent = nf(a.antall.steder);
   $("#k-bygg").textContent = nf(a.antall.bygninger);
   $("#k-hoyde").textContent = nf(a.antall.bygninger_med_hoyde);
+  $("#k-etasjer").textContent = nf(a.antall.bygninger_med_etasjer);
   $("#k-tid").textContent = `${nf(a.steg.reduce((s, x) => s + (x.sekunder ?? 0), 0), 0)} s`;
   $("#release-a").textContent = a.release;
   const bars = (rows: [string, number][], unit = "") => {
@@ -994,8 +1026,9 @@ function renderAnalysis() {
   $("#a-bydeler tbody").innerHTML = a.bydeler
     .map(([n, km2, st, se, by, h, dens]) => `<tr><th scope="row">${esc(n)}</th><td>${nf(km2, 2)}</td><td>${nf(st)}</td><td>${nf(se)}</td><td>${nf(by)}</td><td>${h ?? "–"}</td><td><strong>${nf(dens)}</strong></td></tr>`)
     .join("");
-  $("#a-steg").innerHTML = a.steg.map((s) => `<li><span>${esc(s.steg)}</span><span class="t">${s.sekunder == null ? "fra hurtigbuffer" : `${nf(s.sekunder, 1)} s`}</span></li>`).join("");
-  $("#a-hoyeste").innerHTML = a.hoyeste.map(([n, h]) => `<li><span>${esc(n)}</span><span class="t">${nf(h)} m</span></li>`).join("");
+  $("#a-steg").innerHTML = a.steg.map((s) => `<li><span>${esc(s.steg)}</span><span class="t">${s.sekunder == null ? "fra hurtigbuffer" : s.sekunder < 0.1 ? "< 0,1 s" : `${nf(s.sekunder, 1)} s`}</span></li>`).join("");
+  $("#a-hoyeste").innerHTML = a.hoyeste.map(([n, h, , , est]) => `<li><span>${esc(buildingLabel(n))}</span><span class="t">${nf(h)} m${est ? "*" : ""}</span></li>`).join("");
+  $("#a-storste").innerHTML = a.storste.map(([n, m2]) => `<li><span>${esc(buildingLabel(n))}</span><span class="t">${nf(m2)} m²</span></li>`).join("");
 }
 
 // ---------- Oppstart ----------
@@ -1012,12 +1045,13 @@ async function start() {
   map = new maplibregl.Map({
     container: "map",
     style: await buildStyle(),
-    bounds: [[10.705, 59.9], [10.79, 59.935]],
-    maxBounds: [[BOUNDS[0] - 0.03, BOUNDS[1] - 0.015], [BOUNDS[2] + 0.03, BOUNDS[3] + 0.015]],
+    center: AREA.start.center,
+    zoom: AREA.start.zoom,
+    maxBounds: [[analysis.bbox[0] - 0.03, analysis.bbox[1] - 0.015], [analysis.bbox[2] + 0.03, analysis.bbox[3] + 0.015]],
     minZoom: 11.5,
     maxZoom: 19,
-    pitch: 50,
-    bearing: -18,
+    pitch: AREA.start.pitch,
+    bearing: AREA.start.bearing,
     attributionControl: { compact: true },
   });
   map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");

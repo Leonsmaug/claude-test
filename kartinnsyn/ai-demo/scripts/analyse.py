@@ -1,30 +1,43 @@
 """
-Geodataanalyse av Overture Maps for Oslo sentrum med DuckDB.
+Geodataanalyse av Overture Maps for et byområde med DuckDB.
 
 Leser Overtures GeoParquet direkte fra S3 (kun radgruppene i utsnittet),
 lagrer et lokalt uttrekk og lager datagrunnlaget for KI-kartet:
 
   data/places.json        alle steder (navn, kategori, posisjon, adresse ...)
   data/buildings.json     alle bygninger (sentroide, høyde, etasjer, areal ...)
-  data/districts.geojson  bydeler klippet til utsnittet, med nøkkeltall
+  data/districts.geojson  bydeler/områder klippet til utsnittet, med nøkkeltall
   data/analysis.json      sammendrag og kjøretider til presentasjonen
 
-Kjør:  python analyse.py [--release 2026-09-23.0]
+Områdeinndeling:
+  --omrader polygoner  bruker Overtures bydelspolygoner (finnes f.eks. for Oslo)
+  --omrader voronoi    lager områder rundt Overtures navngitte bydelspunkter
+                       (nærmeste navn, beregnet i UTM33) og klipper bort vann.
+                       Brukes der Overture mangler bydelsgrenser, f.eks. Kristiansand.
+
+Kjør:
+  python analyse.py --by Oslo --bbox 10.68,59.895,10.83,59.945 --omrader polygoner --out ../data
+  python analyse.py --by Kristiansand --bbox 7.90,58.09,8.16,58.205 --omrader voronoi --out ../data-krs
 """
 import argparse, json, os, time
 from pathlib import Path
 import duckdb
 
-BBOX = (10.68, 59.895, 10.83, 59.945)  # min lon, min lat, max lon, max lat
-OUT = Path(__file__).resolve().parent.parent / "data"
 CACHE = Path(os.environ.get("OVERTURE_CACHE", "/tmp/overture-cache"))
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--release", default="2026-09-23.0")
+ap.add_argument("--by", default="Oslo")
+ap.add_argument("--bbox", default="10.68,59.895,10.83,59.945", help="min lon,min lat,max lon,max lat")
+ap.add_argument("--omrader", choices=["polygoner", "voronoi"], default="polygoner")
+ap.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "data"))
 ap.add_argument("--extensions", default=os.environ.get("DUCKDB_EXT_DIR"),
                 help="mappe med httpfs/spatial hvis de ikke kan lastes ned automatisk")
 args = ap.parse_args()
 R = f"s3://overturemaps-us-west-2/release/{args.release}"
+BBOX = tuple(float(v) for v in args.bbox.split(","))
+OUT = Path(args.out)
+AREA_KEY = args.by.lower()
 
 con = duckdb.connect()
 for ext in ("httpfs", "spatial"):
@@ -54,9 +67,10 @@ inside = f"bbox.xmin BETWEEN {x0} AND {x1} AND bbox.ymin BETWEEN {y0} AND {y1}"
 CACHE.mkdir(parents=True, exist_ok=True)
 
 def extract(name, path, where):
-    f = CACHE / f"{args.release}-{name}.parquet"
+    f = CACHE / (f"{args.release}-{name}.parquet" if AREA_KEY == "oslo" else f"{args.release}-{AREA_KEY}-{name}.parquet")
     timing = f.with_suffix(".sekunder")
-    label = "Hent " + {"places": "steder", "buildings": "bygninger", "districts_raw": "bydelsgrenser"}.get(name, name) + " fra S3 (GeoParquet)"
+    label = "Hent " + {"places": "steder", "buildings": "bygninger", "districts_raw": "bydelsgrenser",
+                       "district_points": "bydelspunkter", "water": "vannflater"}.get(name, name) + " fra S3 (GeoParquet)"
     if not f.exists():
         step(label, f"COPY (SELECT * FROM read_parquet('{R}/{path}/*') WHERE {where}) TO '{f}' (FORMAT parquet)")
         timing.write_text(str(steps[-1]["sekunder"]))
@@ -67,9 +81,16 @@ def extract(name, path, where):
 
 extract("places", "theme=places/type=place", inside)
 extract("buildings", "theme=buildings/type=building", inside)
-extract("districts_raw", "theme=divisions/type=division_area",
-        f"bbox.xmin < {x1} AND bbox.xmax > {x0} AND bbox.ymin < {y1} AND bbox.ymax > {y0} "
-        "AND country = 'NO' AND subtype IN ('macrohood', 'neighborhood')")
+overlaps = f"bbox.xmin < {x1} AND bbox.xmax > {x0} AND bbox.ymin < {y1} AND bbox.ymax > {y0}"
+if args.omrader == "polygoner":
+    extract("districts_raw", "theme=divisions/type=division_area",
+            f"{overlaps} AND country = 'NO' AND subtype IN ('macrohood', 'neighborhood')")
+else:
+    # Bydeler (macrohood) og tettsteder med folketall, men ikke selve byen.
+    extract("district_points", "theme=divisions/type=division",
+            f"{inside} AND country = 'NO' AND (subtype = 'macrohood' OR (subtype = 'locality' AND population IS NOT NULL)) "
+            f"AND names.primary <> '{args.by}'")
+    extract("water", "theme=base/type=water", f"{overlaps} AND subtype IN ('ocean', 'lake', 'reservoir', 'water', 'river')")
 
 UTM = "ST_Transform(geometry, 'EPSG:4326', 'EPSG:25833', always_xy := true)"  # EUREF89 UTM 33
 
@@ -105,16 +126,42 @@ SELECT id, names.primary AS name, subtype, class,
        sources[1].dataset AS dataset
 FROM buildings WHERE NOT coalesce(is_underground, false)""")
 
-step("Klipp bydeler til utsnittet og koble på nøkkeltall", f"""
+if args.omrader == "polygoner":
+    step("Klipp bydeler til utsnittet", f"""
+    CREATE OR REPLACE TABLE zones AS
+    WITH c AS (
+      SELECT names.primary AS name, ST_Intersection(geometry, ST_MakeEnvelope({x0}, {y0}, {x1}, {y1})) AS geometry
+      FROM districts_raw WHERE names.primary NOT IN ('Marka', 'Sørengutstikkeren')
+    )
+    SELECT name, geometry, ST_PointOnSurface(geometry) AS label FROM c WHERE NOT ST_IsEmpty(geometry)""")
+    AREA_TYPE = "bydeler"
+else:
+    # Nærmeste-navn-områder: Voronoi i UTM33 (meter, ikke grader), tilbake til WGS84, minus vann.
+    step("Lag områder rundt bydelspunkter (Voronoi i UTM33) og klipp bort vann", f"""
+    CREATE OR REPLACE TABLE zones AS
+    WITH pts AS (
+      SELECT names.primary AS name, ST_Transform(geometry, 'EPSG:4326', 'EPSG:25833', always_xy := true) AS g
+      FROM district_points
+    ), cells AS (
+      SELECT unnest(ST_Dump(ST_VoronoiDiagram(ST_Collect(list(g))))).geom AS cell FROM pts
+    ), named AS (
+      SELECT pts.name, ST_Transform(cells.cell, 'EPSG:25833', 'EPSG:4326', always_xy := true) AS geometry,
+             ST_Transform(pts.g, 'EPSG:25833', 'EPSG:4326', always_xy := true) AS label
+      FROM cells JOIN pts ON ST_Contains(cells.cell, pts.g)
+    ), land AS (
+      SELECT ST_Difference(ST_MakeEnvelope({x0}, {y0}, {x1}, {y1}),
+                           ST_Union_Agg(ST_MakeValid(geometry))) AS geometry
+      FROM water WHERE ST_GeometryType(geometry) IN ('POLYGON', 'MULTIPOLYGON')
+    )
+    SELECT named.name, ST_Intersection(named.geometry, land.geometry) AS geometry, named.label FROM named, land""")
+    AREA_TYPE = "områder (nærmeste bydelsnavn)"
+
+step("Koble steder og bygninger til områdene", f"""
 CREATE OR REPLACE TABLE d AS
-WITH clip AS (
-  SELECT names.primary AS name, subtype,
-         ST_Intersection(geometry, ST_MakeEnvelope({x0}, {y0}, {x1}, {y1})) AS geometry
-  FROM districts_raw WHERE names.primary NOT IN ('Marka', 'Sørengutstikkeren')
-), z AS (
-  SELECT name, subtype, geometry, ST_Area({UTM}) / 1e6 AS km2 FROM clip WHERE NOT ST_IsEmpty(geometry)
+WITH z AS (
+  SELECT name, geometry, label, ST_Area({UTM}) / 1e6 AS km2 FROM zones WHERE NOT ST_IsEmpty(geometry)
 )
-SELECT z.name, z.subtype, round(z.km2, 3) AS km2, z.geometry,
+SELECT z.name, round(z.km2, 3) AS km2, z.geometry, round(ST_X(z.label), 5) AS lx, round(ST_Y(z.label), 5) AS ly,
   (SELECT count(*) FROM p WHERE ST_Contains(z.geometry, ST_Point(p.lon, p.lat))) AS steder,
   (SELECT count(*) FROM p WHERE p.grp = 'Mat og drikke' AND ST_Contains(z.geometry, ST_Point(p.lon, p.lat))) AS servering,
   (SELECT count(*) FROM b WHERE ST_Contains(z.geometry, ST_Point(b.lon, b.lat))) AS bygninger,
@@ -138,27 +185,34 @@ cols, data = rows("SELECT name, subtype, class, lon, lat, h, floors, area_m2, da
 (OUT / "buildings.json").write_text(clean({"columns": cols, "rows": data}))
 
 feats = []
-for name, subtype, km2, gj, steder, servering, bygg, snitt in con.execute(
-    "SELECT name, subtype, km2, ST_AsGeoJSON(ST_SimplifyPreserveTopology(geometry, 0.00005)), steder, servering, bygninger, snitthoyde FROM d ORDER BY steder DESC"
+for name, km2, gj, lx, ly, steder, servering, bygg, snitt in con.execute(
+    "SELECT name, km2, ST_AsGeoJSON(ST_SimplifyPreserveTopology(geometry, 0.00005)), lx, ly, steder, servering, bygninger, snitthoyde FROM d ORDER BY steder DESC"
 ).fetchall():
     feats.append({"type": "Feature", "geometry": json.loads(gj), "properties": {
-        "navn": name, "km2": km2, "steder": steder, "servering": servering, "bygninger": bygg,
+        "navn": name, "km2": km2, "etikett": [lx, ly], "steder": steder, "servering": servering, "bygninger": bygg,
         "snitthoyde": snitt, "steder_per_km2": round(steder / km2) if km2 else None}})
 (OUT / "districts.geojson").write_text(json.dumps({"type": "FeatureCollection", "features": feats}, ensure_ascii=False, separators=(",", ":")))
 
 summary = {
+    "by": args.by,
+    "omradetype": AREA_TYPE,
     "release": args.release,
     "bbox": BBOX,
     "kildedata": "s3://overturemaps-us-west-2/release/" + args.release,
-    "antall": dict(zip(["steder", "bygninger", "bygninger_med_hoyde", "bydeler"], con.execute(
-        "SELECT (SELECT count(*) FROM p), (SELECT count(*) FROM b), (SELECT count(h) FROM b), (SELECT count(*) FROM d)").fetchone())),
+    "omrader_metode": args.omrader,
+    "antall": dict(zip(["steder", "bygninger", "bygninger_med_hoyde", "bygninger_med_etasjer", "bydeler"], con.execute(
+        "SELECT (SELECT count(*) FROM p), (SELECT count(*) FROM b), (SELECT count(h) FROM b), (SELECT count(floors) FROM b), (SELECT count(*) FROM d)").fetchone())),
     "grupper": con.execute("SELECT grp, count(*) n FROM p GROUP BY 1 ORDER BY 2 DESC").fetchall(),
     "toppkategorier": con.execute("SELECT cat, count(*) n FROM p WHERE cat IS NOT NULL GROUP BY 1 ORDER BY 2 DESC LIMIT 12").fetchall(),
     "datasett_steder": con.execute("SELECT ds, count(*) FROM (SELECT unnest(datasets) ds FROM p) GROUP BY 1 ORDER BY 2 DESC").fetchall(),
     "datasett_bygninger": con.execute("SELECT coalesce(dataset, 'ukjent'), count(*) FROM b GROUP BY 1 ORDER BY 2 DESC").fetchall(),
-    "hoydefordeling": con.execute("""SELECT CASE WHEN h < 10 THEN '0–10 m' WHEN h < 20 THEN '10–20 m' WHEN h < 30 THEN '20–30 m'
-        WHEN h < 50 THEN '30–50 m' ELSE '50 m +' END k, count(*) FROM b WHERE h IS NOT NULL GROUP BY 1 ORDER BY min(h)""").fetchall(),
-    "hoyeste": con.execute("SELECT coalesce(name, class, subtype, 'Bygning'), h, lon, lat FROM b WHERE h IS NOT NULL AND area_m2 >= 30 ORDER BY h DESC LIMIT 8").fetchall(),
+    # Målt høyde, ellers estimert fra etasjer (3,2 m per etasje).
+    "hoydefordeling": con.execute("""WITH e AS (SELECT coalesce(h, floors * 3.2) AS he FROM b)
+        SELECT CASE WHEN he < 10 THEN '0–10 m' WHEN he < 20 THEN '10–20 m' WHEN he < 30 THEN '20–30 m'
+        WHEN he < 50 THEN '30–50 m' ELSE '50 m +' END k, count(*) FROM e WHERE he IS NOT NULL GROUP BY 1 ORDER BY min(he)""").fetchall(),
+    "hoyeste": con.execute("""SELECT coalesce(name, class, subtype, 'Bygning'), round(coalesce(h, floors * 3.2), 1), lon, lat, h IS NULL
+        FROM b WHERE coalesce(h, floors * 3.2) IS NOT NULL AND area_m2 >= 30 ORDER BY 2 DESC LIMIT 8""").fetchall(),
+    "storste": con.execute("SELECT coalesce(name, class, subtype, 'Bygning'), area_m2, lon, lat FROM b ORDER BY area_m2 DESC LIMIT 8").fetchall(),
     "bydeler": con.execute("SELECT name, km2, steder, servering, bygninger, snitthoyde, round(steder / km2) FROM d ORDER BY 7 DESC").fetchall(),
     "steg": steps,
 }

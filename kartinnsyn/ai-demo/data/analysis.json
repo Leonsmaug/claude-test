@@ -1,4 +1,6 @@
 {
+ "by": "Oslo",
+ "omradetype": "bydeler",
  "release": "2026-09-23.0",
  "bbox": [
   10.68,
@@ -7,10 +9,12 @@
   59.945
  ],
  "kildedata": "s3://overturemaps-us-west-2/release/2026-09-23.0",
+ "omrader_metode": "polygoner",
  "antall": {
   "steder": 21239,
   "bygninger": 33423,
   "bygninger_med_hoyde": 15188,
+  "bygninger_med_etasjer": 12307,
   "bydeler": 13
  },
  "grupper": [
@@ -140,73 +144,131 @@
  "hoydefordeling": [
   [
    "0–10 m",
-   12081
+   14392
   ],
   [
    "10–20 m",
-   2698
+   6995
   ],
   [
    "20–30 m",
-   354
+   781
   ],
   [
    "30–50 m",
-   38
+   78
   ],
   [
    "50 m +",
-   17
+   21
   ]
  ],
  "hoyeste": [
   [
+   "Posthuset",
+   83.2,
+   10.754301,
+   59.911573,
+   true
+  ],
+  [
    "Boligbygg 4",
    73.0,
    10.761437,
-   59.907749
+   59.907749,
+   false
   ],
   [
    "Deg16",
    71.0,
    10.758872,
-   59.908248
+   59.908248,
+   false
   ],
   [
    "KLP",
    67.0,
    10.757558,
-   59.908517
+   59.908517,
+   false
   ],
   [
    "Oslo rådhus",
    66.0,
    10.733651,
-   59.912014
+   59.912014,
+   false
   ],
   [
    "Deloitte",
    64.0,
    10.758203,
-   59.908391
+   59.908391,
+   false
   ],
   [
    "DNB A",
    64.0,
    10.760296,
-   59.907996
+   59.907996,
+   false
   ],
   [
    "R5 i regjeringskvartalet",
    59.0,
    10.743643,
-   59.915793
+   59.915793,
+   false
+  ]
+ ],
+ "storste": [
+  [
+   "Norsk Gjenvinning",
+   28452.0,
+   10.823227,
+   59.926208
   ],
   [
-   "Aftenposten, VG",
-   59.0,
-   10.74318,
-   59.915349
+   "industrial",
+   26057.0,
+   10.818802,
+   59.92757
+  ],
+  [
+   "Operahuset i Oslo",
+   24896.0,
+   10.752685,
+   59.907499
+  ],
+  [
+   "UiO Livsvitenskapsbygget",
+   19741.0,
+   10.720345,
+   59.945432
+  ],
+  [
+   "stadium",
+   18213.0,
+   10.806472,
+   59.91789
+  ],
+  [
+   "Oslo sentralstasjon (Oslo S)",
+   15882.0,
+   10.753002,
+   59.910975
+  ],
+  [
+   "Nasjonalmuseet",
+   13271.0,
+   10.728822,
+   59.911691
+  ],
+  [
+   "industrial",
+   12786.0,
+   10.778422,
+   59.904652
   ]
  ],
  "bydeler": [
@@ -353,7 +415,11 @@
    "sekunder": 0.2
   },
   {
-   "steg": "Klipp bydeler til utsnittet og koble på nøkkeltall",
+   "steg": "Klipp bydeler til utsnittet",
+   "sekunder": 0.0
+  },
+  {
+   "steg": "Koble steder og bygninger til områdene",
    "sekunder": 0.4
   }
  ]

@@ -6,3 +6,6 @@ ai-demo/.bundle/
 ai-demo/data/*.pmtiles
 ai-demo/data/places.json
 ai-demo/data/buildings.json
+ai-demo/data-*/*.pmtiles
+ai-demo/data-*/places.json
+ai-demo/data-*/buildings.json
