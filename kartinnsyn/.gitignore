@@ -1,3 +1,8 @@
 node_modules/
 dist/
 *.log
+ai-demo/.bundle/
+# Store uttrekk lages på nytt med ai-demo/scripts; små resultater sjekkes inn.
+ai-demo/data/*.pmtiles
+ai-demo/data/places.json
+ai-demo/data/buildings.json

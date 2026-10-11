@@ -1,0 +1,360 @@
+{
+ "release": "2026-09-23.0",
+ "bbox": [
+  10.68,
+  59.895,
+  10.83,
+  59.945
+ ],
+ "kildedata": "s3://overturemaps-us-west-2/release/2026-09-23.0",
+ "antall": {
+  "steder": 21239,
+  "bygninger": 33423,
+  "bygninger_med_hoyde": 15188,
+  "bydeler": 13
+ },
+ "grupper": [
+  [
+   "Tjenester og kontor",
+   8942
+  ],
+  [
+   "Handel",
+   3049
+  ],
+  [
+   "Mat og drikke",
+   2406
+  ],
+  [
+   "Annet",
+   2261
+  ],
+  [
+   "Kultur og utdanning",
+   1887
+  ],
+  [
+   "Reise og overnatting",
+   1077
+  ],
+  [
+   "Natur, sport og fritid",
+   851
+  ],
+  [
+   "Helse",
+   766
+  ]
+ ],
+ "toppkategorier": [
+  [
+   "professional_service",
+   1385
+  ],
+  [
+   "restaurant",
+   1184
+  ],
+  [
+   "personal_or_beauty_service",
+   1013
+  ],
+  [
+   "fashion_and_apparel_store",
+   840
+  ],
+  [
+   "social_or_community_service",
+   685
+  ],
+  [
+   "corporate_or_business_office",
+   624
+  ],
+  [
+   "real_estate_service",
+   518
+  ],
+  [
+   "food_and_beverage_store",
+   513
+  ],
+  [
+   "media_service",
+   508
+  ],
+  [
+   "home_service",
+   497
+  ],
+  [
+   "hardware_home_and_garden_store",
+   478
+  ],
+  [
+   "bar",
+   416
+  ]
+ ],
+ "datasett_steder": [
+  [
+   "Overture",
+   21239
+  ],
+  [
+   "meta",
+   16531
+  ],
+  [
+   "Foursquare",
+   2580
+  ],
+  [
+   "Microsoft",
+   1111
+  ],
+  [
+   "PinMeTo",
+   696
+  ],
+  [
+   "AllThePlaces",
+   311
+  ],
+  [
+   "DAC",
+   10
+  ]
+ ],
+ "datasett_bygninger": [
+  [
+   "OpenStreetMap",
+   32491
+  ],
+  [
+   "Microsoft ML Buildings",
+   932
+  ]
+ ],
+ "hoydefordeling": [
+  [
+   "0–10 m",
+   12081
+  ],
+  [
+   "10–20 m",
+   2698
+  ],
+  [
+   "20–30 m",
+   354
+  ],
+  [
+   "30–50 m",
+   38
+  ],
+  [
+   "50 m +",
+   17
+  ]
+ ],
+ "hoyeste": [
+  [
+   "Boligbygg 4",
+   73.0,
+   10.761437,
+   59.907749
+  ],
+  [
+   "Deg16",
+   71.0,
+   10.758872,
+   59.908248
+  ],
+  [
+   "KLP",
+   67.0,
+   10.757558,
+   59.908517
+  ],
+  [
+   "Oslo rådhus",
+   66.0,
+   10.733651,
+   59.912014
+  ],
+  [
+   "Deloitte",
+   64.0,
+   10.758203,
+   59.908391
+  ],
+  [
+   "DNB A",
+   64.0,
+   10.760296,
+   59.907996
+  ],
+  [
+   "R5 i regjeringskvartalet",
+   59.0,
+   10.743643,
+   59.915793
+  ],
+  [
+   "Aftenposten, VG",
+   59.0,
+   10.74318,
+   59.915349
+  ]
+ ],
+ "bydeler": [
+  [
+   "Sentrum",
+   2.631,
+   4452,
+   544,
+   862,
+   11.3,
+   1692.0
+  ],
+  [
+   "St. Hanshaugen",
+   3.58,
+   2827,
+   339,
+   2751,
+   11.2,
+   790.0
+  ],
+  [
+   "Grünerløkka",
+   4.76,
+   2702,
+   421,
+   3801,
+   9.0,
+   568.0
+  ],
+  [
+   "Frogner",
+   8.658,
+   4538,
+   476,
+   5236,
+   8.6,
+   524.0
+  ],
+  [
+   "Sagene",
+   2.844,
+   1210,
+   133,
+   2093,
+   11.0,
+   425.0
+  ],
+  [
+   "Gamle Oslo",
+   7.99,
+   2775,
+   329,
+   3744,
+   10.1,
+   347.0
+  ],
+  [
+   "Ullern",
+   2.216,
+   652,
+   37,
+   1594,
+   6.8,
+   294.0
+  ],
+  [
+   "Alna",
+   1.623,
+   389,
+   8,
+   787,
+   6.8,
+   240.0
+  ],
+  [
+   "Nordre Aker",
+   1.99,
+   354,
+   36,
+   2122,
+   6.2,
+   178.0
+  ],
+  [
+   "Bjerke",
+   4.319,
+   659,
+   36,
+   3527,
+   5.8,
+   153.0
+  ],
+  [
+   "Østensjø",
+   2.269,
+   297,
+   23,
+   2411,
+   5.4,
+   131.0
+  ],
+  [
+   "Vestre Aker",
+   2.264,
+   258,
+   16,
+   2960,
+   5.8,
+   114.0
+  ],
+  [
+   "Nordstrand",
+   1.622,
+   126,
+   8,
+   1421,
+   5.4,
+   78.0
+  ]
+ ],
+ "steg": [
+  {
+   "steg": "Hent steder fra S3 (GeoParquet)",
+   "sekunder": 7.4,
+   "hurtigbuffer": true
+  },
+  {
+   "steg": "Hent bygninger fra S3 (GeoParquet)",
+   "sekunder": 106.2,
+   "hurtigbuffer": true
+  },
+  {
+   "steg": "Hent bydelsgrenser fra S3 (GeoParquet)",
+   "sekunder": 7.0,
+   "hurtigbuffer": true
+  },
+  {
+   "steg": "Klassifiser steder",
+   "sekunder": 0.1
+  },
+  {
+   "steg": "Beregn bygningsareal og høyder (UTM33)",
+   "sekunder": 0.2
+  },
+  {
+   "steg": "Klipp bydeler til utsnittet og koble på nøkkeltall",
+   "sekunder": 0.4
+  }
+ ]
+}
