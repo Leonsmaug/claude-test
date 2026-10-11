@@ -50,8 +50,9 @@ for ext in ("httpfs", "spatial"):
 con.execute("CREATE OR REPLACE SECRET anon (TYPE s3, PROVIDER config, KEY_ID '', SECRET '', REGION 'us-west-2')")
 if os.environ.get("HTTPS_PROXY"):
     con.execute(f"SET http_proxy='{os.environ['HTTPS_PROXY'].replace('http://', '')}'")
-if os.environ.get("SSL_CERT_FILE") or Path("/root/.ccr/ca-bundle.crt").exists():
-    con.execute(f"SET ca_cert_file='{os.environ.get('SSL_CERT_FILE', '/root/.ccr/ca-bundle.crt')}'")
+# Bak en proxy med egne sertifikater: pek DuckDB på CA-filen via miljøvariabel.
+if os.environ.get("SSL_CERT_FILE"):
+    con.execute(f"SET ca_cert_file='{os.environ['SSL_CERT_FILE']}'")
 
 steps = []
 def step(label, sql, fetch=False):
