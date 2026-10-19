@@ -64,9 +64,22 @@ npm run preview   # server dist/ lokalt
 Netlify, en S3- eller Azure-bøtte bak CDN, eller nginx. Bygget bruker relative stier og
 virker derfor i en undermappe.
 
-Repoet har en ferdig arbeidsflyt (`.github/workflows/kartinnsyn-pages.yml`) som bygger og
-publiserer til GitHub Pages ved push til `main`. Den må slås på én gang under
-**Settings → Pages → Source: GitHub Actions**.
+Repoet har en ferdig arbeidsflyt (`.github/workflows/kartinnsyn-pages.yml`) som bygger én
+gang ved push til `main` og publiserer til to steder:
+
+- **Cloudflare Workers** (`https://kartinnsyn.<konto>.workers.dev`), konfigurert i
+  `wrangler.jsonc`. Krever repo-hemmelighetene `CLOUDFLARE_API_TOKEN` (mal: «Edit Cloudflare
+  Workers», begrenset til egen konto) og `CLOUDFLARE_ACCOUNT_ID` under
+  **Settings → Secrets and variables → Actions**. Jobben stopper hvis en fil i bygget er
+  større enn 25 MiB, som er grensen for statiske filer i Workers.
+- **GitHub Pages**, som slås på under **Settings → Pages → Source: GitHub Actions**. Beholdes
+  i overgangen og kan fjernes (jobben `deploy`) når Cloudflare-adressen er kontrollert.
+
+Bygget legges i GitHub Actions og ikke i Cloudflares egen byggetjeneste fordi Kartlab-dataene
+hentes fra Overture og caches mellom kjøringer der.
+
+Manuell publisering fra egen maskin: `npm run build && npm run kartlab:build &&
+cp -r ai-demo/dist dist/kartlab && npx wrangler deploy`.
 
 ## Struktur
 
