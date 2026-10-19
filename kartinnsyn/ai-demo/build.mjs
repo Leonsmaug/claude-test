@@ -4,7 +4,7 @@
 //
 // For hvert område i ai-demo/dist/<område>/:
 //   kartlab.html  siden slik den publiseres som Artifact på claude.ai
-//   index.html    samme side som frittstående nettside (lokalt, GitHub Pages)
+//   index.html    samme side som frittstående nettside (lokalt, Cloudflare Workers)
 //   data/, fonts/ kartdata og glyfer
 // I tillegg ai-demo/dist/index.html: startside med valg av by.
 //

@@ -17,7 +17,7 @@ Fanene:
 | Hvor | Lenke | KI-chat |
 | --- | --- | --- |
 | claude.ai (privat Artifact) | [Kristiansand](https://claude.ai/artifact/28thskcBQKJSz3KG78nB1m) · [Oslo](https://claude.ai/artifact/DyJRAYwSfmNBETUERWvkK1) | Ja, på hver brukers Claude-konto |
-| GitHub Pages | `<pages-adresse>/kartlab/` (bygges av arbeidsflyten ved push til `main`) | Nei, kart og analyse |
+| Cloudflare Workers | `https://kartinnsyn.<konto>.workers.dev/kartlab/` (bygges av arbeidsflyten ved push til `main`) | Nei, kart og analyse |
 | Lokalt | `npm run kartlab` → http://localhost:4180/ | Nei, kart og analyse |
 
 ### Lokalt, fra en fersk kopi av repoet
@@ -49,7 +49,7 @@ En ny by legges til med en oppføring i `areas.json`, `npm run kartlab:data -- <
 
 - **claude.ai:** `ai-demo/dist/<by>/kartlab.html` publiseres som Artifact med `data/` og `fonts/` som
   vedlagte filer og kapabilitetene `sample`, `db`, `user` og `downloads`.
-- **GitHub Pages:** `.github/workflows/kartinnsyn-pages.yml` lager dataene (cachet mellom kjøringer),
+- **Cloudflare Workers:** `.github/workflows/kartinnsyn-cloudflare.yml` lager dataene (cachet mellom kjøringer),
   bygger begge byene og legger dem under `kartlab/` ved siden av kartinnsynet.
 
 ### Datakvalitet som analysen avdekket
