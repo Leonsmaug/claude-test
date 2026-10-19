@@ -1,4 +1,10 @@
-name: Kartinnsyn – publiser til GitHub Pages
+name: Kartinnsyn – publiser til GitHub Pages og Cloudflare
+
+# Bygget lages én gang og publiseres to steder i overgangsperioden:
+#   deploy      -> GitHub Pages (som før)
+#   cloudflare  -> Cloudflare Workers (statiske filer, se kartinnsyn/wrangler.jsonc)
+# Når Cloudflare-adressen er kontrollert, kan deploy-jobben fjernes og Pages skrus av.
+# Cloudflare-jobben krever repo-hemmelighetene CLOUDFLARE_API_TOKEN og CLOUDFLARE_ACCOUNT_ID.
 
 on:
   push:
@@ -58,6 +64,12 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: kartinnsyn/dist
+      # Samme bygg som vanlig artefakt, slik at Cloudflare-jobben kan hente det.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kartinnsyn-dist
+          path: kartinnsyn/dist
+          retention-days: 1
 
   deploy:
     needs: build
@@ -68,3 +80,43 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  cloudflare:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: kartinnsyn-dist
+          path: kartinnsyn/dist
+
+      # Workers Static Assets: maks 25 MiB per fil og 20 000 filer per versjon (gratisplan).
+      # Kartlab-dataene ligger som base64-tekst og kan vokse, så sjekk før opplasting.
+      - name: Kontroller filstørrelser mot Cloudflare-grensene
+        working-directory: kartinnsyn
+        run: |
+          echo "Største filer:"
+          find dist -type f -printf '%s\t%p\n' | sort -rn | head -5 | numfmt --to=iec-i --field=1
+          antall=$(find dist -type f | wc -l)
+          echo "Antall filer: $antall"
+          for_store=$(find dist -type f -size +25M)
+          if [ -n "$for_store" ]; then
+            echo "::error::Disse filene er større enn 25 MiB og kan ikke publiseres som statiske filer i Workers. Flytt dem til R2:"
+            echo "$for_store"
+            exit 1
+          fi
+          if [ "$antall" -gt 20000 ]; then
+            echo "::error::Bygget har $antall filer, over grensen på 20 000 per versjon."
+            exit 1
+          fi
+
+      - name: Publiser til Cloudflare Workers
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: kartinnsyn
+          command: deploy

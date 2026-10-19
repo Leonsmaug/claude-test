@@ -1,0 +1,13 @@
+// Cloudflare Workers: kartinnsynet publiseres som statiske filer (Workers Static Assets).
+// Bygget lages i GitHub Actions (se .github/workflows/kartinnsyn-pages.yml) og lastes opp
+// med `wrangler deploy`. Det finnes ingen Worker-kode; Cloudflare serverer dist/ direkte.
+{
+  "$schema": "https://unpkg.com/wrangler/config-schema.json",
+  "name": "kartinnsyn",
+  "compatibility_date": "2026-10-19",
+  "assets": {
+    "directory": "./dist",
+    // Standard i Workers: /kartlab/oslo -> /kartlab/oslo/ -> index.html
+    "html_handling": "auto-trailing-slash"
+  }
+}
